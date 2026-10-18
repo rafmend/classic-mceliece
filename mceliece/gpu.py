@@ -1,18 +1,31 @@
+import sys
 import time
 from typing import List, Tuple, Dict, Any
 import numpy as np
 from .params import ParameterSet
 from .gf import bits_to_bytes_le
 
-try:
-    import torch
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+_TORCH = None
+_TORCH_LOAD_ATTEMPTED = False
 
 
-def get_gpu_info() -> Dict[str, Any]:
-    if not HAS_TORCH or not torch.cuda.is_available():
+def _get_torch():
+    global _TORCH, _TORCH_LOAD_ATTEMPTED
+    if not _TORCH_LOAD_ATTEMPTED:
+        _TORCH_LOAD_ATTEMPTED = True
+        try:
+            import torch
+            _TORCH = torch
+        except ImportError:
+            _TORCH = None
+    return _TORCH
+
+
+def get_gpu_info(load_torch: bool = True) -> Dict[str, Any]:
+    if not load_torch and "torch" not in sys.modules:
+        return {"available": False, "device_name": "CPU (carga GPU diferida, activar con --gpu)"}
+    torch = _get_torch()
+    if torch is None or not torch.cuda.is_available():
         return {"available": False, "device_name": "CPU (CUDA no disponible)"}
     return {
         "available": True,
@@ -42,6 +55,7 @@ def encode_gpu(e_bits: List[int], pk_bytes: bytes, params: ParameterSet) -> Tupl
     if not info["available"]:
         return encode_cpu(e_bits, pk_bytes, params), "CPU (Fallback)"
 
+    torch = _get_torch()
     device = torch.device("cuda:0")
     mt = params.mt
     k = params.k
@@ -68,6 +82,8 @@ def benchmark_encode(pk_bytes: bytes, params: ParameterSet, batch_size: int = 25
     pk_arr = np.frombuffer(pk_bytes, dtype=np.uint8).reshape(mt, row_bytes)
     T_bits = np.unpackbits(pk_arr, axis=1, bitorder="little")[:, :k]
 
+    # NOTA DE SEGURIDAD: np.random se usa EXCLUSIVAMENTE aquí para generar datos sintéticos
+    # de benchmarking de throughput matricial. La ruta criptográfica (KEM/DEM) usa os.urandom.
     E_low = np.random.randint(0, 2, size=(k, batch_size), dtype=np.uint32)
     t0 = time.perf_counter()
     _ = (T_bits.astype(np.uint32) @ E_low) & 1
@@ -76,6 +92,7 @@ def benchmark_encode(pk_bytes: bytes, params: ParameterSet, batch_size: int = 25
     gpu_ms = None
     info = get_gpu_info()
     if info["available"]:
+        torch = _get_torch()
         device = torch.device("cuda:0")
         T_gpu = torch.from_numpy(T_bits).to(device=device, dtype=torch.float32)
         E_gpu = torch.from_numpy(E_low.astype(np.float32)).to(device=device)

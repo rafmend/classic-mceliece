@@ -4,11 +4,11 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-brightgreen.svg)](https://www.python.org/)
 [![PyTorch CUDA](https://img.shields.io/badge/GPU-CUDA%20Accelerated-76B900.svg?logo=nvidia)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests: 15 Passed](https://img.shields.io/badge/tests-15%2F15%20passed-success.svg)](tests/)
+[![Tests: 21 Passed](https://img.shields.io/badge/tests-21%2F21%20passed-success.svg)](tests/)
 
-Implementación completa, moderna y lista para producción del criptosistema post-cuántico **Classic McEliece**, diseñada siguiendo estrictamente los estándares internacionales (**NIST PQC Round 4** y **ISO/IEC 18033-2 Amd 2:2026**) y la fundamentación teórica del libro didáctico incluido en la documentación ([`docs/ClassicMcEliece-Apuntes.pdf`](docs/ClassicMcEliece-Apuntes.pdf)).
+Implementación completa, moderna y de referencia didáctica del criptosistema post-cuántico **Classic McEliece**, diseñada siguiendo estrictamente las especificaciones de **NIST PQC Round 4** y **ISO/IEC 18033-2 Amd 2:2026** y la fundamentación teórica del libro didáctico incluido en la documentación ([`docs/ClassicMcEliece-Apuntes.pdf`](docs/ClassicMcEliece-Apuntes.pdf)).
 
-El proyecto incluye una biblioteca modular en Python, una herramienta de consola (CLI) para cifrado híbrido de archivos (**KEM + DEM AES-256-GCM**), aceleración por **GPU (CUDA)** en VRAM para productos matriciales binarios y la documentación académica completa con los fuentes en LaTeX.
+El proyecto incluye una biblioteca modular en Python, una herramienta de consola (CLI) para cifrado híbrido de archivos (**KEM + DEM AES-256-GCM**), protección de claves privadas con contraseña opcional (**PBKDF2 + AES-GCM**), arranque ultrarrápido con carga diferida de GPU (**PyTorch CUDA** bajo demanda) y la documentación académica completa con los fuentes en LaTeX.
 
 ---
 
@@ -18,16 +18,17 @@ El proyecto incluye una biblioteca modular en Python, una herramienta de consola
 - **Cifrado Híbrido Autenticado (KEM + DEM)**:
   - **KEM**: Classic McEliece genera un secreto compartido $K$ de 256 bits y un criptograma $C$ de tan solo 96 bytes (`mceliece348864`).
   - **DEM**: Cifrado simétrico de alta velocidad **AES-256-GCM** para archivos de cualquier tamaño, vinculando el criptograma KEM como datos autenticados asociados (AAD) contra maleabilidad.
-- **Aceleración por GPU (`--gpu`)**:
+- **Aceleración por GPU (`--gpu`) & Arranque Ultrarrápido**:
   - Descarga el producto matriz-vector sobre $\mathbb{F}_2$ ($C = e_{\text{alto}} \oplus T \cdot e_{\text{bajo}}$) a la GPU usando tensores CUDA (PyTorch).
   - Aceleración de hasta **$14.27\times$** comprobada en GPU NVIDIA RTX 5060.
-  - Fallback automático y transparente a CPU si no hay GPU disponible.
-- **Soporte de Parámetros**:
+  - **Carga diferida (*lazy loading*)**: El CLI arranca en < 0.2s sin sobrecarga de importación cuando se usa la CPU.
+- **Soporte de Parámetros y Alertas de Seguridad**:
   - **`mceliece348864`**: Parámetro estándar NIST Categoría 1 ($m=12, n=3488, t=64, k=2720$, clave pública de 255 KiB y seguridad clásica $\approx 141$ bits).
-  - **`toy`**: Parámetro didáctico del libro ($m=4, n=16, t=2, k=8$) para pruebas pedagógicas instantáneas.
-- **Almacenamiento Flexible de Claves**:
+  - **`toy`**: Parámetro didáctico del libro ($m=4, n=16, t=2, k=8$) para pruebas pedagógicas instantáneas (claramente identificado como 0 bits de seguridad para evitar confusiones).
+- **Almacenamiento Flexible y Protección de Claves**:
   - Formato binario estructurado y seguro con número mágico y metadatos.
   - Opción **`--armor`** para exportación e importación en texto plano PEM Base64 (`-----BEGIN CLASSIC MCELIECE PUBLIC KEY-----`).
+  - **Protección por contraseña opcional (`--passphrase`)**: Cifrado de la clave privada `.sk` mediante derivación **PBKDF2-HMAC-SHA256** (100.000 iteraciones) + **AES-256-GCM**.
 - **Verificación Matemática Paso a Paso**:
   - Subcomando `verify --toy` que reproduce al 100% todas las matrices, certificados y trazas del Apéndice A del libro.
 - **Libro y Documentación Incluidos**:
@@ -114,7 +115,7 @@ pip install -e ".[gpu,test]"
 
 ### 1. Generación de Claves (`keygen`)
 
-Genera un par de claves Classic McEliece (`.pk` pública y `.sk` privada). Por defecto utiliza `mceliece348864`:
+Genera un par de claves Classic McEliece (`.pk` pública y `.sk` privada). Por defecto utiliza `mceliece348864`. Puedes proteger opcionalmente la clave privada con una contraseña:
 
 ```bash
 # Formato binario estructurado:
@@ -123,18 +124,21 @@ Genera un par de claves Classic McEliece (`.pk` pública y `.sk` privada). Por d
 # Formato PEM blindado en texto (--armor):
 ./bin/mceliece keygen -o mi_clave --armor
 
-# Generación con el conjunto didáctico de bolsillo:
+# Protección opcional de la clave privada con contraseña (PBKDF2-HMAC-SHA256 + AES-256-GCM):
+./bin/mceliece keygen -o mi_clave_segura --armor --passphrase "MiContraseñaSegura123!"
+
+# Generación con el conjunto didáctico de bolsillo (toy):
 ./bin/mceliece keygen -p toy -o clave_toy --armor
 ```
 *Salida:*
 - `mi_clave.pk`: 261.120 bytes (binario) o ~353 KB (PEM Base64).
-- `mi_clave.sk`: 6.492 bytes (con permisos automáticos restringidos `0600`).
+- `mi_clave.sk`: 6.492 bytes (con permisos automáticos `0600`, cifrada si se utilizó `--passphrase`).
 
 ---
 
 ### 2. Inspección de Claves y Criptogramas (`info`)
 
-Muestra parámetros algebraicos, dimensiones y metadatos de cualquier clave o archivo cifrado:
+Muestra parámetros algebraicos, dimensiones, estado de protección y categoría de seguridad real de cualquier clave o archivo cifrado:
 
 ```bash
 ./bin/mceliece info mi_clave.pk
@@ -144,13 +148,19 @@ Muestra parámetros algebraicos, dimensiones y metadatos de cualquier clave o ar
  INFORMACIÓN DEL ARCHIVO: mi_clave.pk
 =================================================================
  Tamaño: 353,730 bytes
- Acelerador GPU: NVIDIA GeForce RTX 5060 Laptop GPU (Disponible: True)
+ Acelerador GPU: CPU (carga GPU diferida, activar con --gpu) (Disponible: False)
  Tipo: CLAVE PÚBLICA (Public Key)
  Conjunto: mceliece348864 (ID: 0x01)
  Parámetros: m=12, n=3488, t=64, k=2720
  Formato: Armored (PEM Base64)
- Categoría NIST: 1 (Seguridad post-cuántica clásica ~141 bits)
+ Categoría NIST: 1 (NIST Categoría 1 (~141 bits clásicos, ~128 bits cuánticos))
 =================================================================
+```
+
+Si se inspecciona una clave didáctica `toy`, el sistema emite una advertencia de seguridad explícita:
+```text
+ Categoría NIST: Ninguna (0 bits de seguridad)
+ [!] ALERTA DE SEGURIDAD: Didáctico / Demostración (0 bits de seguridad, ¡NO USAR EN PRODUCCIÓN!)
 ```
 
 ---
@@ -174,7 +184,7 @@ Cifra cualquier tipo de archivo (documentos, imágenes, binarios) combinando Cla
 
 ### 4. Descifrado Autenticado de Archivos (`dec`)
 
-Descifra el contenedor `.enc`, decapsulando la clave de sesión con el decodificador de Patterson sobre el código de Goppa secreto:
+Descifra el contenedor `.enc`, decapsulando la clave de sesión con el decodificador de Patterson sobre el código de Goppa secreto. Si la clave está protegida por contraseña, la solicitará interactivamente o puede pasarse con `--passphrase`:
 
 ```bash
 ./bin/mceliece dec -k mi_clave.sk -i documento.pdf.enc -o documento_restaurado.pdf
@@ -270,13 +280,35 @@ Para ejecutar la suite completa de pruebas unitarias:
 pytest -v
 ```
 
-Las 15 pruebas cubren:
+Las 21 pruebas automatizadas cubren:
 1. `test_benes`: Enrutamiento y evaluación de redes de Beneš en $m=4$ y $m=12$ (5.888 bytes).
 2. `test_gf_poly`: Aritmética de cuerpos finitos $\mathbb{F}_{16}$ y $\mathbb{F}_{2^{12}}$, inversos, raíces cuadradas y algoritmo extendido de Euclides.
-3. `test_gpu`: Paridad exacta bit a bit entre CPU y GPU en la codificación matricial.
+3. `test_gpu`: Paridad exacta bit a bit entre CPU y GPU en la codificación matricial y comprobación de disponibilidad.
 4. `test_kem`: Generación de claves, encapsulación, decapsulación y rechazo implícito con criptogramas corruptos.
-5. `test_toy`: Comprobación exhaustiva del Apéndice A.
-6. `test_hybrid_cli`: Cifrado y descifrado de archivos de texto y binarios, detección de corrupción y todos los comandos CLI.
+5. `test_toy`: Comprobación exhaustiva del 100% de las cifras y matrices del Apéndice A.
+6. `test_format`: Serialización de claves públicas y privadas en binario y PEM, protección por contraseña con PBKDF2 + AES-GCM y detección de formato.
+7. `test_hybrid_cli`: Cifrado/descifrado de archivos, protección de clave por contraseña en CLI, alertas dinámicas de seguridad en `info` y carga diferida (*lazy loading*) de GPU.
+
+---
+
+## Consideraciones de Seguridad, Auditoría y Rendimiento
+
+> [!IMPORTANT]
+> **Alcance de la Implementación & Estado de Auditoría**:
+> - Esta implementación ha sido desarrollada con fines educativos, de investigación y como código de referencia didáctico de alta fidelidad para el libro didáctico adjunto.
+> - **Código no auditado**: La biblioteca no ha sido sometida a una auditoría formal de seguridad por terceros independientes. Es segura para fines académicos, prácticas de laboratorio y protección de archivos personales, pero **no debe utilizarse como sustituto de bibliotecas certificadas para producción como `liboqs` u OpenSSL en infraestructuras críticas**.
+> - **Canales laterales (*Side-Channels*)**: Los algoritmos algebraicos en Python puro (eliminación gaussiana, decodificación de Patterson, etapas de Beneš) contienen ramificaciones y tiempos dependientes de datos secretos (*variable-time*). No ofrecen garantías de tiempo constante (*constant-time*).
+> - **Rendimiento de `keygen` (~0.7s)**: El tiempo de generación de claves en Python es sorprendentemente rápido porque utiliza el tipo `int` de Python (implementado en C con palabras de 64 bits para operaciones vectoriales XOR a nivel de palabra), pero no ejecuta las costosas mitigaciones de tiempo constante que ralentizan a la implementación C de referencia.
+
+> [!NOTE]
+> **Fuentes de Aleatoriedad Criptográfica**:
+> - Todas las operaciones criptográficas del KEM y del DEM utilizan exclusivamente fuentes de entropía seguras proporcionadas por el sistema operativo (`os.urandom`) y expansión determinista estandarizada con SHAKE-256.
+> - El generador `np.random` interviene **única y exclusivamente** dentro de `benchmark_encode` (`mceliece/gpu.py`) con el propósito de generar matrices sintéticas de prueba para medir el *throughput* matricial CPU vs GPU.
+
+> [!TIP]
+> **Rendimiento en Agentes y Tareas por Lotes (*Multi-file*)**:
+> - Gracias a la **carga diferida (*lazy loading*)** de PyTorch, las llamadas de consola a la CLI (`mceliece --help`, `info`, `keygen`, `enc` en CPU) arrancan en **~0.15s** (16x más rápido que con carga eagerly de PyTorch).
+> - Si se van a cifrar o procesar múltiples archivos (e.g., desde un agente o script automatizado), **se recomienda importar la biblioteca directamente en proceso en Python** (`from mceliece import encrypt_data, decrypt_data`), eliminando por completo el coste de inicialización de subprocesos en la shell.
 
 ---
 

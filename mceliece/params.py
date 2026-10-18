@@ -21,6 +21,9 @@ class ParameterSet:
     s_bytes: int               # ceil(n / 8)
     seed_bytes: int = 32
     key_bytes: int = 32
+    nist_category: int | None = None  # NIST Category (1, 3, 5) or None for toy/didactic
+    security_bits: int = 0            # Classical security level in bits
+    security_description: str = ""    # Human-readable security summary
 
     @property
     def q(self) -> int:
@@ -59,6 +62,9 @@ TOY_PARAMS = ParameterSet(
     g_bytes=2,                 # 2 coefs * 1 byte
     alpha_bytes=4,             # 4 bytes en toy
     s_bytes=2,                 # 16 bits = 2 bytes
+    nist_category=None,
+    security_bits=0,
+    security_description="Didáctico / Demostración (0 bits de seguridad, ¡NO USAR EN PRODUCCIÓN!)",
 )
 
 MCELIECE348864_PARAMS = ParameterSet(
@@ -77,6 +83,9 @@ MCELIECE348864_PARAMS = ParameterSet(
     g_bytes=128,               # 64 * 2 bytes
     alpha_bytes=5888,          # 23 * 2048 bits = 47104 bits = 5888 bytes
     s_bytes=436,               # 3488 / 8 bytes
+    nist_category=1,
+    security_bits=141,
+    security_description="NIST Categoría 1 (~141 bits clásicos, ~128 bits cuánticos)",
 )
 
 PARAMS_BY_NAME: Dict[str, ParameterSet] = {

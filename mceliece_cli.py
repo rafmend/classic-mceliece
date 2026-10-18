@@ -1,19 +1,46 @@
 #!/usr/bin/env python3
 """
 mceliece_cli.py - Herramienta de línea de comandos para Classic McEliece
-Implementa cifrado híbrido KEM + DEM (AES-256-GCM) y aceleración GPU (PyTorch CUDA).
+Implementa cifrado híbrido KEM + DEM (AES-256-GCM), protección por contraseña opcional
+para claves privadas y aceleración GPU bajo demanda (PyTorch CUDA).
 """
 
 import sys
 import os
 import argparse
 import time
+import base64
+import getpass
+from typing import Optional
 from mceliece.params import PARAMS_BY_NAME, PARAMS_BY_ID, MCELIECE348864_PARAMS
 from mceliece.kem import keygen, encap, decap
 from mceliece.hybrid import encrypt_data, decrypt_data, ENC_MAGIC
-from mceliece.format import serialize_key, deserialize_key, PK_MAGIC, SK_MAGIC
+from mceliece.format import (
+    serialize_key,
+    deserialize_key,
+    is_key_encrypted,
+    PK_MAGIC,
+    SK_MAGIC,
+    SK_ENC_MAGIC,
+)
 from mceliece.gpu import get_gpu_info, benchmark_encode
 from mceliece.toy_verifier import run_toy_verification
+
+
+def _resolve_passphrase(args, sk_blob: bytes) -> Optional[str]:
+    """Obtiene la contraseña si se indicó por CLI o solicita interactivamente si la clave está cifrada."""
+    if getattr(args, "passphrase", None):
+        return args.passphrase
+    if is_key_encrypted(sk_blob):
+        if sys.stdin.isatty():
+            return getpass.getpass("[?] Introduce la contraseña para desbloquear la clave privada: ")
+        else:
+            print(
+                "[-] Error: La clave privada está protegida por contraseña. Proporcione la contraseña con --passphrase.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    return None
 
 
 def cmd_keygen(args):
@@ -32,8 +59,9 @@ def cmd_keygen(args):
     pk_raw, sk_raw = keygen(params, seed=seed)
     elapsed = time.perf_counter() - t0
 
+    passphrase = getattr(args, "passphrase", None)
     pk_bytes = serialize_key(pk_raw, params, is_secret=False, armor=args.armor)
-    sk_bytes = serialize_key(sk_raw, params, is_secret=True, armor=args.armor)
+    sk_bytes = serialize_key(sk_raw, params, is_secret=True, armor=args.armor, passphrase=passphrase)
 
     pk_path = f"{args.output}.pk"
     sk_path = f"{args.output}.sk"
@@ -50,9 +78,11 @@ def cmd_keygen(args):
         pass
 
     fmt_name = "PEM Base64 (--armor)" if args.armor else "Binario estructurado"
+    sk_status = " (cifrada con PBKDF2 + AES-256-GCM)" if passphrase else " (sin contraseña, sin cifrar)"
+
     print(f"[+] Generación completada con éxito en {elapsed:.2f}s.")
     print(f"[+] Clave pública: {pk_path} ({len(pk_bytes):,} bytes, formato: {fmt_name})")
-    print(f"[+] Clave privada: {sk_path} ({len(sk_bytes):,} bytes, permisos 0600)")
+    print(f"[+] Clave privada: {sk_path} ({len(sk_bytes):,} bytes, permisos 0600{sk_status})")
 
 
 def cmd_enc(args):
@@ -94,7 +124,13 @@ def cmd_dec(args):
 
     with open(args.secret_key, "rb") as f:
         sk_blob = f.read()
-    raw_sk, sk_params, was_armored = deserialize_key(sk_blob, expect_secret=True)
+
+    passphrase = _resolve_passphrase(args, sk_blob)
+    try:
+        raw_sk, sk_params, was_armored = deserialize_key(sk_blob, expect_secret=True, passphrase=passphrase)
+    except ValueError as exc:
+        print(f"[-] Error al cargar la clave privada: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     with open(args.input, "rb") as f:
         container = f.read()
@@ -134,7 +170,13 @@ def cmd_kem_encap(args):
 def cmd_kem_decap(args):
     with open(args.secret_key, "rb") as f:
         sk_blob = f.read()
-    raw_sk, params, _ = deserialize_key(sk_blob, expect_secret=True)
+
+    passphrase = _resolve_passphrase(args, sk_blob)
+    try:
+        raw_sk, params, _ = deserialize_key(sk_blob, expect_secret=True, passphrase=passphrase)
+    except ValueError as exc:
+        print(f"[-] Error al cargar la clave privada: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     with open(args.ciphertext, "rb") as f:
         C_bytes = f.read()
@@ -158,40 +200,78 @@ def cmd_info(args):
     with open(args.target, "rb") as f:
         data = f.read()
 
-    gpu_info = get_gpu_info()
+    gpu_info = get_gpu_info(load_torch=getattr(args, "gpu", False))
     print("=" * 65)
     print(f" INFORMACIÓN DEL ARCHIVO: {args.target}")
     print("=" * 65)
     print(f" Tamaño: {len(data):,} bytes")
     print(f" Acelerador GPU: {gpu_info['device_name']} (Disponible: {gpu_info['available']})")
 
-    # Identificar si es clave pública, privada o contenedor
-    if data.startswith(b"-----BEGIN ") or data.startswith(PK_MAGIC):
+    # Identificar si es clave pública
+    if data.startswith(b"-----BEGIN CLASSIC MCELIECE PUBLIC KEY-----") or data.startswith(PK_MAGIC):
         try:
             _, params, armored = deserialize_key(data, expect_secret=False)
             print(" Tipo: CLAVE PÚBLICA (Public Key)")
             print(f" Conjunto: {params.name} (ID: 0x{params.param_id:02x})")
             print(f" Parámetros: m={params.m}, n={params.n}, t={params.t}, k={params.k}")
             print(f" Formato: {'Armored (PEM Base64)' if armored else 'Binario estructurado'}")
-            print(f" Categoría NIST: 1 (Seguridad post-cuántica clásica ~141 bits)")
+            if params.nist_category is not None:
+                print(f" Categoría NIST: {params.nist_category} ({params.security_description})")
+            else:
+                print(f" Categoría NIST: Ninguna (0 bits de seguridad)")
+                print(f" [!] ALERTA DE SEGURIDAD: {params.security_description}")
             print("=" * 65)
             return
         except Exception:
             pass
 
-    if data.startswith(b"-----BEGIN ") or data.startswith(SK_MAGIC):
+    # Identificar si es clave privada (cifrada o en claro)
+    if (
+        data.startswith(b"-----BEGIN ")
+        or data.startswith(SK_MAGIC)
+        or data.startswith(SK_ENC_MAGIC)
+    ):
+        enc = is_key_encrypted(data)
         try:
-            _, params, armored = deserialize_key(data, expect_secret=True)
-            print(" Tipo: CLAVE PRIVADA (Secret Key)")
-            print(f" Conjunto: {params.name} (ID: 0x{params.param_id:02x})")
-            print(f" Parámetros: m={params.m}, n={params.n}, t={params.t}, k={params.k}")
-            print(f" Formato: {'Armored (PEM Base64)' if armored else 'Binario estructurado'}")
-            print(f" Desglose: delta=32B, c={params.c_bytes}B, g={params.g_bytes}B, alpha={params.alpha_bytes}B, s={params.s_bytes}B")
-            print("=" * 65)
-            return
+            param_id = None
+            armored = data.lstrip().startswith(b"-----BEGIN ")
+            if armored:
+                b64_lines = [
+                    line.strip()
+                    for line in data.decode("ascii", errors="ignore").splitlines()
+                    if line.strip() and not line.startswith("-----") and ":" not in line
+                ]
+                blob = base64.b64decode("".join(b64_lines))
+            else:
+                blob = data
+
+            if len(blob) >= 8 and blob[:7] in (SK_MAGIC, SK_ENC_MAGIC):
+                param_id = blob[7]
+            params = PARAMS_BY_ID.get(param_id)
+
+            if params is not None:
+                tipo_desc = "CLAVE PRIVADA CIFRADA (Encrypted Secret Key)" if enc else "CLAVE PRIVADA (Secret Key)"
+                print(f" Tipo: {tipo_desc}")
+                if enc:
+                    print(" Protección: PBKDF2-HMAC-SHA256 (100,000 iter) + AES-256-GCM")
+                else:
+                    print(" Protección: Sin contraseña (solo permisos de archivo)")
+                print(f" Conjunto: {params.name} (ID: 0x{params.param_id:02x})")
+                print(f" Parámetros: m={params.m}, n={params.n}, t={params.t}, k={params.k}")
+                print(f" Formato: {'Armored (PEM Base64)' if armored else 'Binario estructurado'}")
+                if not enc:
+                    print(f" Desglose: delta=32B, c={params.c_bytes}B, g={params.g_bytes}B, alpha={params.alpha_bytes}B, s={params.s_bytes}B")
+                if params.nist_category is not None:
+                    print(f" Categoría NIST: {params.nist_category} ({params.security_description})")
+                else:
+                    print(f" Categoría NIST: Ninguna (0 bits de seguridad)")
+                    print(f" [!] ALERTA DE SEGURIDAD: {params.security_description}")
+                print("=" * 65)
+                return
         except Exception:
             pass
 
+    # Identificar si es contenedor cifrado .enc
     if len(data) >= 8 and data[:5] == ENC_MAGIC:
         param_id = data[5]
         params = PARAMS_BY_ID.get(param_id)
@@ -200,6 +280,11 @@ def cmd_info(args):
         print(" Tipo: CONTENEDOR CIFRADO HÍBRIDO (MCEL v1)")
         print(f" Algoritmo: Classic McEliece KEM + AES-256-GCM")
         print(f" Parámetro KEM: {pname}")
+        if params:
+            if params.nist_category is not None:
+                print(f" Seguridad KEM: Categoría NIST {params.nist_category} ({params.security_description})")
+            else:
+                print(f" [!] ALERTA DE SEGURIDAD: Cifrado con conjunto didáctico '{params.name}' ({params.security_description})")
         print(f" Criptograma KEM C: {ct_len} bytes")
         payload_len = len(data) - (8 + ct_len + 12 + 16)
         print(f" Carga útil cifrada: {max(0, payload_len):,} bytes")
@@ -286,6 +371,7 @@ def main():
     p_keygen.add_argument("-p", "--params", choices=["mceliece348864", "toy"], default="mceliece348864", help="Conjunto de parámetros")
     p_keygen.add_argument("-o", "--output", required=True, help="Prefijo para los archivos de salida (.pk y .sk)")
     p_keygen.add_argument("--armor", action="store_true", help="Guardar en formato PEM Base64 (--armor)")
+    p_keygen.add_argument("--passphrase", help="Contraseña opcional para cifrar la clave privada .sk con PBKDF2 + AES-256-GCM")
     p_keygen.add_argument("--seed", help="Semilla hex de 32 bytes (opcional, determinista)")
     p_keygen.set_defaults(func=cmd_keygen)
 
@@ -302,6 +388,7 @@ def main():
     p_dec.add_argument("-k", "--secret-key", required=True, help="Ruta a la clave privada (.sk)")
     p_dec.add_argument("-i", "--input", required=True, help="Archivo cifrado de entrada (.enc)")
     p_dec.add_argument("-o", "--output", required=True, help="Archivo de salida descifrado")
+    p_dec.add_argument("--passphrase", help="Contraseña para descifrar la clave privada .sk (si está protegida)")
     p_dec.set_defaults(func=cmd_dec)
 
     # kem-encap
@@ -317,11 +404,13 @@ def main():
     p_kdec.add_argument("-k", "--secret-key", required=True, help="Ruta a la clave privada (.sk)")
     p_kdec.add_argument("-c", "--ciphertext", required=True, help="Archivo del criptograma C de entrada")
     p_kdec.add_argument("-s", "--shared-secret", required=True, help="Archivo donde guardar la clave K (32B)")
+    p_kdec.add_argument("--passphrase", help="Contraseña para descifrar la clave privada .sk (si está protegida)")
     p_kdec.set_defaults(func=cmd_kem_decap)
 
     # info
     p_info = subparsers.add_parser("info", help="Inspeccionar una clave o archivo cifrado")
     p_info.add_argument("target", help="Archivo a inspeccionar (.pk, .sk o .enc)")
+    p_info.add_argument("--gpu", action="store_true", help="Comprobar acelerador GPU")
     p_info.set_defaults(func=cmd_info)
 
     # verify

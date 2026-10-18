@@ -1,0 +1,370 @@
+% ======================================================================
+%  CAPÍTULO 18 — SOLUCIONES (parte 2: capítulos 1-8)
+% ======================================================================
+
+\subsection*{Capítulo 1 --- La amenaza cuántica y el giro
+post-cuántico (capítulo~\ref{ch:pqc})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item Grover busca la clave en $2^{k/2}$ evaluaciones: AES-256
+        cae a $2^{128}$ (dentro del listón) y AES-128 a $2^{64}$
+        (muy por debajo). La aceleración cuántica es cuadrática en el
+        exponente, no total: basta doblar el tamaño de clave.
+  \item \emph{Criptogramas}, de menor a mayor: \texttt{mceliece460896}
+        ($156$~B) $<$ ML-KEM-768 ($1088$~B) $<$ HQC-128
+        ($\approx4497$~B). \emph{Claves públicas}: ML-KEM-768
+        ($1184$~B) $<$ HQC-128 ($\approx2249$~B) $<$
+        \texttt{mceliece460896} ($\num{524160}$~B). McEliece
+        intercambia los extremos: el criptograma más pequeño y la
+        clave más grande.
+  \item Porque el tráfico cifrado \emph{hoy} ya se graba: cuando
+        exista el ordenador cuántico, se descifrará retroactivamente.
+        Los datos de vida útil larga están expuestos desde el momento
+        en que se capturan; migrar después no repara lo ya grabado, de
+        ahí actuar ahora (híbridos incluidos).
+  \item \textnormal{(}Investigación.\textnormal{)} La nota del BSI
+        (1 de octubre de 2026, \cite{bsi2026}) sostiene, en esencia:
+        (a)~los métodos de agosto--octubre (distinguidores de
+        $2^{120}$--$2^{124}$; recuperaciones estimadas de
+        $2^{140}$--$2^{148}$; el cálculo de una sola ejecución de
+        Weis, $2^{99}$--$2^{102}$) estrechan el margen lo bastante
+        para tomarse en serio, aunque nada esté roto; (b)~principio de
+        precaución: no iniciar despliegues nuevos, preferir ML-KEM,
+        FrodoKEM y HQC, y conservar la mitad clásica de los híbridos
+        existentes, revisando la TR-02102-1. (Respuesta abierta: lo
+        evaluable es distinguir lo demostrado de lo estimado y leer
+        la recomendación como decisión de política.)
+\end{enumerate}
+
+\subsection*{Capítulo 2 --- Códigos lineales
+(capítulo~\ref{ch:lineales})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item Si $\vx$ y $\vz$ difieren en la posición $j$, entonces
+        $\vx_j\neq\mathbf{y}_j$ o $\mathbf{y}_j\neq\vz_j$ (si ambas igualdades se
+        dieran, $\vx_j=\vz_j$). Así
+        $\supp(\vx+\vz)\subseteq\supp(\vx+\mathbf{y})\cup\supp(\mathbf{y}+\vz)$,
+        y tomando cardinales se obtiene la desigualdad triangular.
+  \item Una base: las filas $1100$ y $0011$ sirven como $G$ y también
+        como $\Hmat$ (las comprobaciones son $x_1+x_2=0$ y
+        $x_3+x_4=0$). Las palabras no nulas son $1100$, $0011$ y
+        $1111$, de pesos $2$, $2$ y $4$: $d=2$.
+  \item Para $y=0101010$: síndrome $=\Hmat_2+\Hmat_4+\Hmat_6
+        =011+101+010=100=\Hmat_5$: se corrige la posición $5$
+        ($0$-indexada $4$): $\hat y=0101110$, mensaje $0101$. Para
+        $y'=1100110$: síndrome $=\Hmat_1+\Hmat_2+\Hmat_5+\Hmat_6
+        =110+011+100+010=011=\Hmat_2$: se corrige la posición $2$:
+        $\hat y'=1000110$, mensaje $1000$.
+  \item Hay $\binom{n}{t}$ palabras de peso $t$: $\binom71=7$ para
+        el Hamming; $\binom{3488}{64}\approx2^{456{,}3}$ para
+        \texttt{348864}: unos $10^{137}$ candidatos.
+  \item Sea $e''$ de peso mínimo con $\Syn(e'')=\Syn(y)$
+        (existe: al menos $e$). Entonces $y+e''$ es un codeword (su
+        síndrome es $0$) y todo codeword $c$ cumple
+        $\wt(y+c)\ge\wt(e'')$, porque $y+c$ tiene el mismo síndrome
+        que $e''$ y $e''$ es el mínimo. Así el codeword más cercano
+        dista de $y$ exactamente $\wt(e'')$, que es a lo sumo
+        $\wt(e)$.
+  \item Un código sirve para «publicar $G'=SGP$» si tiene (a)
+        decodificación eficiente hasta $t$ (sin la descripción
+        secreta no; con ella, Patterson) y (b) ocultación: el disfraz
+        hace que $G'$ parezca una matriz aleatoria. Los dos recursos
+        de quien descifra son el computacional (Patterson) y el
+        algebraico (la descripción $g$ y el orden de $\alpha$, que
+        convierten $G'$ en un código con decodificador).
+\end{enumerate}
+
+\subsection*{Capítulo 3 --- Cuerpos finitos
+(capítulo~\ref{ch:cuerpos})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item $z^5=z\cdot z^4=z(z+1)=z^2+z$; y
+        $z^{-5}=z^{15-5}=z^{10}=z^2+z+1=\hx7$.
+  \item $\Tr(1)=1+1+1+1=0$; $\Tr(z)=z+z^2+z^4+z^8
+        =z+z^2+(z+1)+(z^2+1)=0$. Tienen traza $1$ exactamente la
+        mitad: $8$ elementos (el núcleo de $\Tr$ es un subespacio
+        de dimensión $m-1=3$).
+  \item $\sqrt{z^3+z^2}$: como $z^3+z^2=z^6$ (pues
+        $z^6=z^4z^2=(z+1)z^2=z^3+z^2$), la raíz es $z^3$.
+        $\sqrt{z^2+z+1}$: como $z^2+z+1=z^{10}$, la raíz es
+        $z^5=z^2+z=\hx6$. En general, $\sqrt{\beta}=\beta^{2^{m-1}}$
+        (para $m=4$, elevar al exponente $8$).
+  \item $\Tr(\beta^2)=\beta^2+\beta^4+\beta^8+\beta^{16}
+        =\beta^2+\beta^4+\beta^8+\beta=\Tr(\beta)$ (en $\FF4$,
+        $\beta^{16}=\beta$). La linealidad sobre $\Ftwo$: Frobenius da
+        $(\beta+\gamma)^{2^i}=\beta^{2^i}+\gamma^{2^i}$ para cada
+        $i$, y sumar conserva la aditividad; $\Tr(a\beta)=a\Tr(\beta)$
+        para $a\in\Ftwo$ es inmediato.
+  \item $x^2+x+1$ no tiene raíces en $\Ftwo$ ($P(0)=P(1)=1$), luego
+        es irreducible; $x^2+x=x(x+1)$ es reducible. El criterio de la
+        traza ($x^2+x+a$ irreducible $\iff\Tr(a)=1$) coincide:
+        $\Tr(1)=1$ y $\Tr(0)=0$. (Sobre $\FF4$ ambos se parten:
+        $x^2+x+1$ tiene las raíces de orden $3$.)
+  \item Suma: un XOR por bit. Producto: red de AND+XOR de ancho
+        $\approx m^2$. Raíz cuadrada: casi gratis, es $\Ftwo$-lineal
+        (una matriz de XORs). Inversa: la más cara (cadena de
+        elevar-al-cuadrado y multiplicar, $x\mapsto x^{q-2}$; o
+        Itoh--Tsujii; o tablas), tanto por profundidad como por
+        dependencia de datos. Patterson la usa $O(t)$ veces.
+\end{enumerate}
+
+\subsection*{Capítulo 4 --- Códigos de Goppa
+(capítulo~\ref{ch:goppa})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item Si $g(\alpha_i)=0$, entonces $(x+\alpha_i)$ divide a $g$ y
+        $1/(x+\alpha_i)$ no existe módulo $g$ (es un divisor de
+        cero); la columna de síndrome
+        $\sigma_i=(x+\alpha_i+1)/g(\alpha_i)$ no se puede calcular.
+        Equivalente: todas las condiciones se anulan en la posición
+        $i$ (el término $c_i/(x+\alpha_i)$ queda libre): aparecerían
+        palabras de peso $1$ y la distancia se derrumba.
+  \item $A(x)/(x-\alpha_i)=\prod_{j\neq i}(x-\alpha_j)$: evaluado
+        en $\alpha_i$ da $\prod_{j\neq i}(\alpha_i-\alpha_j)$. Y
+        $A'(x)$ es la suma de los productos que omiten un factor;
+        al evaluar en $\alpha_i$, los términos que conservan el
+        factor $(x-\alpha_i)$ se anulan, y queda exactamente el
+        mismo producto. Es la identidad que traduce la suma de
+        fracciones a la fórmula polinomial de la especificación.
+  \item Con el ordenamiento natural del juguete ($\alpha_0=0$,
+        $\alpha_1=1$): $g(0)=g(1)=z^3$, luego
+        $1/g(0)=z^{-3}=z^{12}=\hx f$; la columna $0$ es
+        $(\hx f,0)$ y la $1$ es $(\hx f,\hx f)$. (La
+        tabla~\ref{tab:lab-columnas} del laboratorio muestra el
+        resto.)
+  \item $d\ge2t+1$ dice exactamente que la bola de radio $2t$
+        alrededor de $0$ solo contiene al codeword nulo: ningún peso
+        $\le2t$. No contradice $d>2t+1$ porque es una cota
+        \emph{inferior}: el lema garantiza al menos $2t+1$; la
+        distancia real puede ser mayor (en el juguete es $5=2t+1$,
+        pero la cota no prohíbe $6$ o más en otros códigos).
+  \item Con $g=h^2$: la hipótesis de
+        \texttt{thm:gopla-2t} (libre de cuadrados) falla, pero la
+        respuesta de fondo es la identidad de van Lint
+        $\Gamma_2(L,g)=\Gamma_2(L,g^2)$: tomando $g=h$ queda
+        $\Gamma_2(L,h^2)=\Gamma_2(L,h)$. El código con $g=h^2$ es
+        \emph{el mismo} que con $h$: el «$t$ efectivo» sigue siendo
+        $\deg h$, no se gana distancia ni dimensión. McEliece nunca
+        lo intentó porque duplicar el grado nominal no cambia el
+        código: promesa vacía.
+  \item Semillas $\to$ $g$ (con $\textsf{Irreducible}$) y orden de
+        $\alpha$ (con $\textsf{FieldOrdering}$) $\to$ el código
+        $\Gamma_2(L,g)=\{c:\sum_j c_j/(x+\alpha_j)\equiv0\pmod g\}$
+        $\to$ la tabla de síndromes $\tilde{\Hmat}$ ($2\times n$
+        sobre $\FF4$, columnas $\alpha_i^j/g(\alpha_i)$) $\to$ la
+        matriz binaria $\hat{\Hmat}$ ($8\times16$) $\to$
+        eliminación gaussiana $\to$ $(\mathrm{I}_8\,|\,T)$. Se
+        publica solo $T$ (junto con $t$); se mantienen secretos $g$,
+        el orden $\alpha$ (y las semillas, y $s$ en el KEM). El
+        código $\ker(\mathrm{I}_{mt}|T)$ es público.
+\end{enumerate}
+
+\subsection*{Capítulo 5 --- Laboratorio 1
+(capítulo~\ref{ch:labgoppa})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item $g(z)=z^2+z+z^3=z^3+z^2+z=\hx e$; $1/\hx e=z^{-11}=z^4
+        =z+1=\hx3$; $z\cdot\hx3=z^2+z=\hx6$. La columna $j=2$ de
+        la tabla~\ref{tab:lab-columnas} es exactamente $(\hx3,\hx6)$:
+        coinciden.
+  \item $\tilde{\Hmat}e_5=\tilde{\Hmat}_5=(\hx8,\hx e)$ (pues
+        $g(z^2+1)=\hx f$, $1/\hx f=z^3=\hx8$ y
+        $(z^2+1)z^3=\hx e$); $\tilde{\Hmat}e_9=(\hx a,\hx5)$ (pues
+        $g(z^3+1)=z^6$, $1/z^6=z^9=\hx a$ y
+        $(z^3+1)z^9=\hx5$). La suma es
+        $(\hx8+\hx a,\hx e+\hx5)=(\hx2,\hx b)$. $e_5+e_9$ se decodifica
+        de forma única porque dos palabras de peso $\le2$ con el
+        mismo síndrome diferirían en un codeword de peso
+        $\le4<d=5$: imposible.
+  \item Multiplicando y usando $z^4=z+1$ en cada coeficiente:
+        constante $4\cdot\hx a=z^2(z^3+z)=z^3+z^2+z=\hx e$; lineal
+        $4\cdot7+9\cdot\hx a=\hx f+\hx5=\hx a$; cuadrático
+        $9\cdot7=z^3+z=\hx a$. En el lado derecho,
+        $1+(z+z^3)g(x)$ tiene esa misma forma: $z+z^3=\hx a$,
+        $1+\hx a z^3=\hx e$. Es el certificado de Patterson.
+  \item Con $E=\{j\}$: $\sigma(x)=\prod_{i\in E}(x+\alpha_i)
+        =x+\alpha_j$ (grado $1\le t$), y $\sigma'=1$: la ecuación
+        clave se satisface con $\sigma=x+\alpha_j$. Patterson
+        devuelve el localizador; su raíz $\alpha_j$ señala la
+        posición del error.
+  \item $(\vx P^{-1})_1=\vx_{\sigma^{-1}(1)}=\vx_{15}=1$ y
+        $(\vx P^{-1})_3=\vx_{\sigma^{-1}(3)}=\vx_{13}=0$: la misma
+        permutación envía los dos errores de $\vz$ a las posiciones
+        $0$ y $10$ ($\supp(\vz P^{-1})=\{\sigma(3),\sigma(12)\}
+        =\{10,0\}$). Es exactamente lo que el laboratorio decodifica
+        con Patterson.
+  \item Dos ataques: (a)~enumerar las $137$ palabras de peso $\le2$
+        y quedarse con la que comparte síndrome con $C$
+        ($120$ de peso $2$, $16$ de peso $1$, la nula);
+        (b)~tabla completa síndrome$\to$palabra mínima ($256$
+        entradas, $137$ no triviales): un oráculo de descifrado
+        instantáneo. Con $n\approx8000$ el espacio de síndromes pasa
+        a $\ge2^{64}$ y $\binom{n}{t}$ es astronómico: mueren la
+        tabla y la enumeración, y quedan los algoritmos de la
+        parte~\ref{part:seguridad} (ISD, métodos estructurales).
+\end{enumerate}
+
+\subsection*{Capítulo 6 --- El McEliece de 1978
+(capítulo~\ref{ch:1978})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item La cadena es
+        $\vx P^{-1}=(\vu S)G+\vz P^{-1}$: $\wt(\vz P^{-1})=\wt(\vz)$
+        (permutar no cambia el peso), y $\wt(\vz)\le t$ es lo que
+        permite aplicar el corolario de corrección al codeword
+        $(\vu S)G$. El paso fino: para otro codeword $c'$,
+        $\dist(\vx P^{-1},c')\ge d-\wt(\vz)\ge 2t+1-t=t+1>t$:
+        el codeword verdadero está \emph{estrictamente} más cerca.
+        Con errores de peso $t+1$ «a veces», esa desigualdad se
+        rompe (podría haber dos codewords a distancia $t+1$):
+        Patterson podría devolver otro codeword y el descifrado
+        fallaría o mentiría.
+  \item $G'$ para $(1024,524)$: $524\cdot1024=\num{536576}$ bits
+        ($\approx65{,}5$~KiB). Para \texttt{348864}:
+        $2720\cdot3488=\num{9487360}$ bits
+        ($\approx1{,}13$~MB). La parte sistemática
+        $(\mathrm{I}_{2720}|T)$ ocupa $mt\lceil k/8\rceil
+        =768\cdot340=\num{261120}$~B (la clave pública): el ahorro
+        frente a $G'$ completa es $1185920/261120=4{,}54$ veces.
+  \item Si $(\vu',\vz')\ne(\vu,\vz)$ diera el mismo $\vx$, entonces
+        $(\vu+\vu')G'=\vz+\vz'$: un codeword de peso
+        $\le2t<2t+1\le d$, imposible salvo que sea $0$; y si es
+        $0$, $\vu=\vu'$ y $\vz=\vz'$.
+  \item $\binom{974}{524}/\binom{1024}{524}=2^{-53{,}61}$: es la
+        probabilidad de que un conjunto de $k$ coordenadas elegido al
+        azar evite las $t=50$ posiciones del error; con
+        $2^{53{,}61}$ intentos de coste $k^3\approx2^{27{,}1}$ sale
+        $2^{80{,}7}\approx2\cdot10^{24}$ (el «ataque de las $k$
+        coordenadas», cotizado en $10^{19}$ en el artículo: el
+        recálculo favorece al defensor). $\sum_{i\le50}\binom{1024}{i}
+        =2^{284{,}11}$, así que un síndrome al azar se decodifica con
+        probabilidad $2^{284{,}11-500}=2^{-215{,}89}$ (el artículo
+        decía $2^{-215{,}59}$: coincide en lo esencial).
+  \item Porque la NP-dureza es un enunciado \emph{del peor caso},
+        \emph{asintótico} y sobre \emph{instancias arbitrarias}:
+        (a)~no dice nada de las instancias aleatorias de una familia
+        estructurada (los códigos de Goppa); (b)~para $n=3488$ fijo
+        no acota nada concreto; (c)~y la seguridad del esquema es una
+        conjetura de dureza \emph{en media} sobre su distribución
+        (capítulo~\ref{ch:seguridad}).
+  \item Con el oráculo que avisa: se envía $\vx\oplus\ve_j$ para cada
+        $j$. Si $j$ está en el soporte del error, el peso baja a
+        $t-1$ y el descifrado «funciona»; si no, sube a $t+1$ y
+        «falla». Bastan $n=1024$ consultas para aprender el soporte
+        de $\vz$ y, con él, $\vu$. En el KEM real cada consulta
+        devuelve una clave pseudoaleatoria (rechazo implícito): no
+        hay aviso que aprender (capítulo~\ref{ch:encapdecap}).
+\end{enumerate}
+
+\subsection*{Capítulo 7 --- La reformulación de Niederreiter
+(capítulo~\ref{ch:niederreiter})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item Con $H_0=(\mathrm{I}_{n-k}\,|\,T_0)$, la palabra
+        $v=(\gamma,\mathbf{0})$ tiene
+        $vH_0^{\top}=\mathrm{I}\cdot\gamma+0=\gamma$. El paso (2) del
+        descifrado pide el único $\vf$ de peso $\le t$ con
+        $\vf H_0^{\top}=\gamma$: exactamente el problema de
+        decodificación del capítulo~\ref{ch:goppa} (encontrar el
+        vector de menor peso con un síndrome dado), y Patterson lo
+        resuelve operando sobre el polinomio síndrome del vector
+        rellenado.
+  \item Si $\vf H_0^{\top}=\vf'H_0^{\top}$, entonces
+        $(\vf+\vf')H_0^{\top}=0$: $\vf+\vf'$ es un codeword de
+        $\Gamma$ de peso $\le2t<d$, luego $\vf+\vf'=0$ y
+        $\vf=\vf'$.
+  \item La demostración: primero $G'(H')^{\top}
+        =S_1GP\,P^{\top}H_0^{\top}S_2^{\top}$: aquí se usa
+        $PP^{\top}=\mathrm{I}_n$; después
+        $S_1(GH_0^{\top})S_2^{\top}=0$: aquí, la ortogonalidad
+        $GH_0^{\top}=0$ (los codewords tienen síndrome nulo).
+        Con permutaciones distintas quedaría $P_1P_2^{\top}\ne
+        \mathrm{I}_n$ en medio y la ortogonalidad no se seguiría:
+        sin ella no hay reducción (el síndrome de $\vx$ ya no es el
+        de $\vz$).
+  \item Factores $k/(n-k)$: juguete $8/8=1$;
+        \texttt{348864}, $2720/768=3{,}54$;
+        \texttt{460896}, $3360/1248=2{,}69$;
+        \texttt{6688128}, $5024/1664=3{,}02$;
+        \texttt{6960119}, $5413/1547=3{,}50$;
+        \texttt{8192128}, $6528/1664=3{,}92$.
+        El original $(1024,524)$: $k/(n-k)=524/500=1{,}05$: con tasa
+        $\approx1/2$, la matriz dual era casi tan grande como la
+        generadora; el ahorro, mísero (del orden del $5\%$).
+  \item Tamaño del espacio de mensajes: el descifrado debe
+        funcionar sobre la imagen de
+        $\textsf{FixedWeight}$; admitir pesos menores agrandaría la
+        imagen con preimágenes «fáciles» (pesos pequeños, búsqueda
+        más ligera) sin ganar entropía. Uniformidad: los teoremas de
+        las transformaciones a KEM (capítulo~\ref{ch:kem}) y la
+        proposición~\ref{prop:fixedweight-uniform} exigen $\ve$
+        uniforme en \emph{el} conjunto de vectores de peso $t$
+        exacto; mezclar pesos rompería el modelo y la simetría del
+        reto.
+  \item Los dos problemas de inversión:
+        $\vx=\vu G'+\vz\mapsto\vu$ (McEliece) y
+        $\vc=\ve(H')^{\top}\mapsto\ve$ (Niederreiter). Son «el mismo
+        problema» por la proposición~\ref{prop:nied-reduccion}: el
+        síndrome público de $\vx$ es el de $\vz$ (ortogonalidad
+        $G'(H')^{\top}=0$), y recuperar $\ve$ equivale a recuperar
+        $\vz$; en ambos casos el fondo es el problema
+        de decodificación por síndromes: dada la imagen de un error
+        de peso $\le t$, encontrarlo.
+\end{enumerate}
+
+\subsection*{Capítulo 8 --- Del cifrado a un KEM
+(capítulo~\ref{ch:kem})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item En la transformación, $\textsf{Encap}$ genera $e$, publica
+        $C=\textsf{Enc}(e)$ (aquí $C=(\mathrm{I}_{mt}|T)e$) y deriva
+        $K=H(1,e,C)$; $\textsf{Decap}$ calcula $e'=\textsf{Decode}(C)$
+        y $K'=H(1,e',C)$. Las dos partes coinciden si y solo si
+        $\textsf{Decode}(\textsf{Enc}(e))=e$ con probabilidad $1$: el
+        único punto donde entra la corrección de la PKE (el
+        $(\varepsilon_{\mathrm{corr}})$ de los teoremas).
+  \item Con $K=H(e)$, la consulta al oráculo con la segunda
+        codificación $\tilde C$ de $C^*$ (distinta como bytes,
+        idéntica como elemento, por el relleno del
+        capítulo~\ref{ch:parametros}) devuelve $H(e^*)=K^*$: el reto
+        cae con una consulta que no es $C^*$. Con $K=H(1,e,C)$, el
+        criptograma entra en el hash: la respuesta del oráculo es
+        $H(1,e^*,\tilde C)$, una clave distinta (bindada a la
+        codificación exacta) e inútil para el ataque; la etiqueta
+        $1$ además separa el dominio de la rama de rechazo
+        $H(0,s,C)$.
+  \item Devolver $\bot$ obliga a los protocolos a reaccionar
+        (alertas, reintentos) y esa reacción es observable: es un
+        oráculo de validez. Devolver siempre una clave
+        pseudoaleatoria elimina la señal: el atacante no distingue
+        «no decodificable» de «decodificable con valor improbable».
+        La clave $s$ aparece como secreto de la rama de rechazo: en
+        el teorema~\ref{thm:kem-rom} en el término $2q_H/|S|$ (hay
+        que adivinar $s$ para simular) y en el
+        teorema~\ref{thm:kem-qrom} en los términos de PRF sobre $s$.
+  \item Segundo término: $q_D/|P|=2^{64}/2^{456}=2^{-392}$. Tercero:
+        $2q_H/|S|=2\cdot2^{64}/2^{256}=2^{-191}$. Para que el tercero
+        dejara de ser despreciable haría falta $q_H\approx2^{255}$:
+        un número de consultas imposible (y entonces fallarían
+        antes los demás términos del modelo).
+  \item (a)~Con ventaja $<1/1000$: $2\sqrt{\varepsilon_{\mathrm{OW}}}
+        <1/1000$ exige
+        $\varepsilon_{\mathrm{OW}}<(1/2000)^2\approx2^{-21{,}9}$.
+        (b)~Con ventaja $<2^{-128}$:
+        $\varepsilon_{\mathrm{OW}}<2^{-258}$. Es decir: el teorema
+        convierte el objetivo CCA de $128$ bits en un requisito
+        OW-CPA de $\approx2^{-258}$: los parámetros deben tener
+        margen doble, no nulo (es la raíz cuadrada del QROM, que el
+        modelo de costes realista suaviza pero no elimina).
+  \item La tabla~\ref{tab:kem-cm} lo dice: (1)~sin reencriptar: la
+        verificación $\textsf{Enc}(\mathrm{pk},e')=C$ no hace
+        falta porque $\textsf{Decode}$ ya exige $\wt(e')=t$ y
+        $(\mathrm{I}_{mt}|T)e'=C$; (2)~sin $\mathrm{pk}'$ dentro de
+        la clave secreta (no hay reencriptación que lo use);
+        (3)~$s$ de $n$ bits en vez de $256$; (4)~$\ve$ de
+        $\textsf{FixedWeight}$ en vez de uniforme-genérico. La
+        verificación de $\textsf{Decode}$ basta porque, para un
+        criptograma, «ser imagen de un $e'$ de peso $t$» y «cumplir
+        $\wt(e')=t\ \wedge\ (\mathrm{I}_{mt}|T)e'=C$» son la misma
+        condición: la primera se comprueba sin reencriptar.
+\end{enumerate}

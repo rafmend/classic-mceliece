@@ -1,0 +1,430 @@
+\chapter{¿Qué significa romper McEliece?}\label{ch:seguridad}
+
+\begin{roadmap}
+La especificación ya está contada: sabemos generar claves, encapsular
+y desencapsular. Falta la pregunta que lo decide todo: ¿cuánto cuesta
+de verdad romper un conjunto de parámetros? Esta parte la responde en
+cuatro capítulos. Este fija el vocabulario: qué objetivos puede
+perseguir un atacante (el mensaje, la clave, distinguir), qué está
+demostrado y qué se conjetura. Los capítulos~\ref{ch:isd}
+y~\ref{ch:estructura} recorren las dos grandes familias de
+criptoanálisis ---decodificación y ataques estructurales--- y
+el~\ref{ch:2026} fecha el estado del arte: los resultados de 2025 y
+2026 que obligaron a revisar supuestos.
+\end{roadmap}
+
+\section{Tres objetivos (y no todos rompen)}
+
+Un atacante contra Classic McEliece ve una clave pública
+$\mathrm{pk}$ y, en el modelo activo
+(definición~\ref{def:kem-indcca}), puede además preguntar al oráculo de
+desencapsulación. A grandes rasgos puede perseguir tres objetivos, de
+dificultad y significado muy distintos:
+
+\begin{enumerate}[leftmargin=1.7em,itemsep=3pt]
+  \item \textbf{Romper el mensaje.} Dados $\mathrm{pk}=T$ y un
+        criptograma $C$, encontrar la semilla $e$ con la que se
+        encapsuló: la única de peso $t$ con $\Hmat e=C$, donde
+        $\Hmat=(\mathrm{I}_{mt}\,|\,\Tmat)$.
+  \item \textbf{Romper la clave.} Encontrar \emph{alguna} descripción
+        eficiente del código público: el par $(g,\alpha)$ secreto, o
+        más en general cualquier algoritmo que decodifique $t$
+        errores para el código de $\mathrm{pk}$ (una \emph{clave
+        equivalente}, definición~\ref{def:seg-equivalente}). Con ella
+        se descifra todo, hoy y en el futuro de esa clave.
+  \item \textbf{Distinguir.} Decidir si $\mathrm{pk}$ es una clave
+        legítima o una matriz aleatoria del mismo tamaño. Es
+        información \emph{estructural}: revela que el código lleva
+        huellas de Goppa, aunque no descifra nada por sí sola.
+\end{enumerate}
+
+\begin{definicion}{Clave equivalente}{seg-equivalente}
+Sea $\mathrm{pk}=T$ con $\Hmat=(\mathrm{I}_{mt}\,|\,\Tmat)$. Una
+\emph{clave equivalente} es cualquier algoritmo $\mathcal{D}$ que,
+dado $C\in\Ftwo^{mt}$, devuelve un $e\in\Ftwo^{n}$ con $\wt(e)\le t$
+y $\Hmat e=C$ siempre que tal $e$ exista, y el símbolo de fallo en
+caso contrario.
+\end{definicion}
+
+El nombre es exacto: quien tiene una clave equivalente descifra
+directamente el criptograma $C$ ---basta pedirle $\mathcal{D}(C)$:
+eso es exactamente lo que hace $\textsf{Decode}$--- sin saber nada
+de $g$ ni del orden de las $\alpha_i$. Los ataques estructurales del
+capítulo~\ref{ch:estructura} buscan exactamente esto, o más: a veces
+se conforman con distinguir.
+
+La figura~\ref{fig:seg-mapa} ordena los tres objetivos y sus
+relaciones. Recuperar la clave implica romper el mensaje: una clave
+equivalente decodifica cualquier criptograma. El recíproco no se
+conoce: un algoritmo que resuelva \emph{el juego} del objetivo~1 solo
+tiene que ganar con los criptogramas que el juego le entrega, y nadie
+ha reducido a partir de ahí un decodificador general. Y distinguir
+está, hoy por hoy, al margen: un buen distinguidor de claves públicas
+no se convierte ---con lo que se sabe--- en un ataque contra el
+mensaje. Cada flecha de esa figura tiene, por tanto, una dirección
+demostrada o un interrogante, y la parte~\ref{part:seguridad} entera
+se organiza alrededor de ellas.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    obj/.style={draw=mcblue,fill=mcsky!40,rounded corners=3pt,align=center,
+      font=\footnotesize,inner sep=5pt,text width=4.0cm,minimum height=1.9cm},
+    objg/.style={obj,draw=mcgreen,fill=mcgreen2!45},
+    objv/.style={obj,draw=mcviolet,fill=mcviolet!15},
+    arr/.style={-{Stealth[length=2.4mm]},thick},
+    darr/.style={dashed,thick,mcgray}
+  ]
+  \node[obj]  (m1) at (2.2,0)
+    {\textbf{1.~Romper el mensaje}\\[2pt]
+     {\scriptsize hallar $e$ con $\Hmat e=C$; es el problema SD sobre
+      la clave pública (capítulo~\ref{ch:isd})}};
+  \node[objg] (m2) at (8.0,0)
+    {\textbf{2.~Romper la clave}\\[2pt]
+     {\scriptsize hallar una clave equivalente; no hace falta el $g$
+      de Goppa (capítulo~\ref{ch:estructura})}};
+  \node[objv] (m3) at (13.8,0)
+    {\textbf{3.~Distinguir}\\[2pt]
+     {\scriptsize decidir si $\mathrm{pk}$ parece aleatoria
+      (capítulo~\ref{ch:estructura})}};
+  \draw[arr,mcgreen] ([yshift=1.5mm]m2.west) -- ([yshift=1.5mm]m1.east);
+  \draw[darr] ([yshift=-1.5mm]m1.east) -- ([yshift=-1.5mm]m2.west);
+  \draw[darr,{Stealth}-{Stealth}] ([yshift=1.5mm]m2.east)
+    -- node[above=3pt,font=\tiny,color=mcgray]{sin reducción conocida}
+    ([yshift=1.5mm]m3.west);
+  % aspas de "no se conoce" sobre la flecha discontinua 1<-2
+  \draw[mcred,thick] (4.78,-0.05) -- (4.98,-0.25);
+  \draw[mcred,thick] (4.78,-0.25) -- (4.98,-0.05);
+  % aspas sobre la doble flecha 2<->3
+  \draw[mcred,thick] (10.80,0.05) -- (11.00,0.25);
+  \draw[mcred,thick] (10.80,0.25) -- (11.00,0.05);
+  \node[font=\scriptsize,align=center] at (8.0,-1.55)
+    {\textcolor{mcgreen}{$\longrightarrow$}~quien tiene una clave
+     equivalente decodifica el mensaje \quad
+     \textcolor{mcred}{$\times$}~sin implicación demostrada};
+\end{tikzpicture}
+\caption{Los tres objetivos de un atacante, con la dirección
+demostrada (clave $\Rightarrow$ mensaje) y los interrogantes
+abiertos. La seguridad del KEM descansa, en último término, en el
+objetivo~1: los teoremas del capítulo~\ref{ch:kem} reducen su
+IND-CCA2 a la OW-CPA del esquema desnudo, que es exactamente este
+problema.}
+\label{fig:seg-mapa}
+\end{figure}
+
+\section{El juego OW-CPA y el problema SD}
+
+Para medir el primer objetivo se usa la noción clásica de las PKE
+deterministas.
+
+\begin{definicion}{One-wayness bajo ataque de texto claro elegido (OW-CPA)}{seg-ow}
+Sea $(\textsf{Gen}',\textsf{Enc},\textsf{Dec})$ una PKE determinista
+y correcta, con espacio de mensajes $P$. El juego:
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+  \item el retador genera
+        $(\mathrm{pk}',\mathrm{sk}')\leftarrow\textsf{Gen}'$ y sortea
+        $e\leftarrow P$ uniforme;
+  \item calcula $C=\textsf{Enc}(\mathrm{pk}',e)$ y entrega
+        $(\mathrm{pk}',C)$ al adversario~$\mathcal{A}$;
+  \item $\mathcal{A}$ termina con $e'$ y gana si $e'=e$.
+\end{enumerate}
+La PKE es OW-CPA si todo adversario eficiente gana con probabilidad
+despreciable.
+\end{definicion}
+
+En Classic McEliece, $\textsf{Enc}$ es $\textsf{Encode}(\cdot,T)$ y
+$P$ son los vectores de peso exactamente $t$ ---que
+$\textsf{FixedWeight}$ recorre de forma uniforme
+(proposición~\ref{prop:fixedweight-uniform})---. El lema siguiente
+traduce el juego al lenguaje de la teoría de códigos.
+
+\begin{lema}{OW-CPA de Classic McEliece es SD sobre la clave pública}{seg-ow-sd}
+Fijemos un conjunto de parámetros y sea
+$(\textsf{KeyGen},\textsf{Encode},\textsf{Decode})$ el esquema
+subyacente. Ganar el juego OW-CPA de la definición~\ref{def:seg-ow}
+es, exactamente, resolver SD (definición~\ref{def:sd}, versión de
+búsqueda) para el código público: dados $\Tmat$ y
+$C=\textsf{Encode}(e,T)$, hallar la palabra de error $e$ de peso $t$.
+En particular, un atacante OW-CPA es un algoritmo de decodificación
+por síndromes para la distribución de matrices que genera
+$\textsf{KeyGen}$, y todo algoritmo así gana el juego.
+\end{lema}
+
+\begin{proof}
+Por linealidad de $\textsf{Encode}$: $\textsf{Encode}(e',T)=\Hmat e'$
+con $\Hmat=(\mathrm{I}_{mt}\,|\,\Tmat)$. Si $\mathcal{A}$ gana con
+$e'$, entonces $\Hmat(e+e')=0$: el vector $e+e'$ pertenece al código
+público, que tiene distancia mínima $\ge 2t+1$
+(teorema~\ref{thm:gopla-2t}), y su peso es a lo sumo $2t$. Por tanto
+$e+e'=0$, es decir, $e'=e$: no hay soluciones «falsas» de peso
+$\le t$, y el juego coincide tarea a tarea con SD. En sentido
+contrario, quien resuelve SD para $C=\Hmat e$ devuelve $e$ y gana el
+juego.
+\end{proof}
+
+Obsérvese lo que el lema \emph{no} dice: nada sobre la dificultad de
+resolver SD en la distribución de matrices que produce
+$\textsf{KeyGen}$. Traducir un problema a otro no lo vuelve difícil;
+solo identifica el enemigo con nombre y apellidos. Eso permite medir
+la seguridad con las herramientas del capítulo~\ref{ch:isd}, pero
+también recuerda que la confianza última es una conjetura sobre esa
+distribución concreta, no sobre «SD en general».
+
+\section{La cadena de reducciones y la conjetura central}
+
+La figura~\ref{fig:seg-cadena} ordena lo que sabemos. La seguridad
+IND-CCA2 del KEM está demostrada (capítulo~\ref{ch:kem}) a partir de
+dos insumos: la OW-CPA del esquema desnudo y suposiciones simétricas
+(el hash y la pseudoraleatoriedad de la clave de rechazo). La OW-CPA
+es, por el lema~\ref{lem:seg-ow-sd}, la dificultad de SD sobre la
+clave pública. Y ahí se detiene la cadena demostrativa: la dificultad
+de SD \emph{en esa distribución} es una conjetura.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    conjbox/.style={draw=mcorange,fill=mcorange2!45,rounded corners=3pt,
+      align=center,font=\footnotesize,inner sep=4pt,text width=4.6cm,
+      minimum height=1.0cm},
+    statebox/.style={draw=mcblue,fill=mcsky!40,rounded corners=3pt,
+      align=center,font=\footnotesize,inner sep=4pt,text width=4.6cm,
+      minimum height=0.9cm},
+    thmbox/.style={draw=mcgreen,fill=mcgreen2!45,rounded corners=3pt,
+      align=center,font=\footnotesize,inner sep=4pt,text width=4.6cm,
+      minimum height=0.9cm},
+    sidebox/.style={draw=mcviolet,fill=mcviolet!12,rounded corners=3pt,
+      align=center,font=\scriptsize,inner sep=3.5pt,text width=3.3cm},
+    implbox/.style={draw=mcgray,dashed,fill=mcgray!8,rounded corners=3pt,
+      align=center,font=\scriptsize,inner sep=3.5pt,text width=3.3cm},
+    arr/.style={-{Stealth[length=2.4mm]},thick,mcgray}
+  ]
+  \node[conjbox] (sd) at (0,0)
+    {\textbf{SD sobre la distribución de claves}\\
+     {\scriptsize (matrices que genera $\textsf{KeyGen}$) ---
+      \textbf{conjetura}}};
+  \node[statebox] (ow) at (0,-2.9)
+    {\textbf{OW-CPA} del esquema desnudo\\
+     {\scriptsize (hallar el error $e$ del criptograma)}};
+  \node[thmbox] (ind) at (0,-5.8)
+    {\textbf{IND-CCA2} del KEM\\
+     {\scriptsize (clave de sesión indistingible)}};
+  \node[sidebox] (hash) at (6.4,-5.0)
+    {suposiciones simétricas: el hash $H$ y la PRF de $\delta$};
+  \node[implbox] (impl) at (6.4,-1.55)
+    {implementación real: canales laterales, fallos de hardware,
+     aleatoriedad --- fuera del modelo};
+  \draw[arr] (sd.south) -- node[left=3pt,font=\scriptsize,align=right]
+    {lema~\ref{lem:seg-ow-sd}: son la misma tarea\\ (implicación trivial)}
+    (ow.north);
+  \draw[arr] (ow.south) -- node[left=3pt,font=\scriptsize,align=right]
+    {teoremas~\ref{thm:kem-rom} y~\ref{thm:kem-qrom}\\ (ROM; en QROM,
+     con pérdida)} (ind.north);
+  \draw[arr] (hash.west) -- (ind.east);
+  \draw[dashed,mcgray] (impl.west) -- (0.4,-1.55)
+    node[midway,above,font=\tiny,color=mcgray]{no cubierto};
+\end{tikzpicture}
+\caption{La cadena de reducciones de Classic McEliece. Arriba, la
+conjetura dura; en medio, la propiedad que se mide con el
+criptoanálisis (capítulos~\ref{ch:isd} y~\ref{ch:estructura}); abajo,
+la garantía del KEM, que además necesita el hash y la PRF. La
+implementación real queda fuera del modelo, y se vigila aparte.}
+\label{fig:seg-cadena}
+\end{figure}
+
+\begin{rigor}[La conjetura central, sin adornos]
+Para cada conjunto de parámetros, la conjetura es esta: no existirá
+un algoritmo esencialmente mejor que los mejores conocidos hoy para
+encontrar $e$ a partir de $(\Tmat,\textsf{Encode}(e,T))$ con $e$
+uniforme de peso $t$. La historia admite lectura doble. Es la
+conjetura que ha sostenido casi medio siglo de escrutinio, desde
+1978, y ninguna de las mejoras publicadas ha pasado de recortes del
+exponente (capítulo~\ref{ch:isd}). Pero también es una apuesta
+inductiva: nada demuestra que la curva de ataques se vaya a quedar
+quieta, y los parámetros se eligen con margen ---y se revisan cuando
+el margen se estrecha--- precisamente por eso. Lo que sí está
+demostrado: la corrección del esquema
+(proposiciones~\ref{prop:1978-correcto} y~\ref{prop:nied-correcto}),
+la equivalencia del lema~\ref{lem:seg-ow-sd}, la NP-dureza de SD en
+el peor caso~\cite{bcmv1978} y las reducciones del
+capítulo~\ref{ch:kem}. Lo conjetural es solo ---y nada menos que---
+la dureza en la distribución real.
+\end{rigor}
+
+\section{Las familias de ataque de esta parte}
+
+El criptoanálisis de McEliece se organiza en dos grandes familias,
+más su versión cuántica; la tabla~\ref{tab:seg-familias} las sitúa y
+las reparte entre los capítulos siguientes.
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{@{}p{3.2cm}p{3.4cm}p{7.0cm}l@{}}
+\toprule
+familia & objetivo & herramienta principal & dónde\\
+\midrule
+decodificación clásica & el mensaje (y, con trabajo extra, la
+clave) & conjuntos de información: de Prange (1962) a May--Ozerov,
+con estimadores modernos & cap.~\ref{ch:isd}\\
+decodificación cuántica & el mensaje & Grover y paseos cuánticos: a
+lo sumo, la raíz del exponente clásico & cap.~\ref{ch:isd}\\
+estructural & la clave o distinguir & particiones de soporte,
+álgebra sobre $\GF{2^m}$, distinguidores & cap.~\ref{ch:estructura}\\
+\bottomrule
+\end{tabular}
+\caption{Las familias de ataque contra Classic McEliece. El
+capítulo~\ref{ch:2026} añade la cuarta dimensión: el tiempo, con los
+resultados de 2025 y 2026 y las respuestas del equipo.}
+\label{tab:seg-familias}
+\end{table}
+
+Las fronteras entre familias son porosas, en las dos direcciones. Un
+decodificador \emph{es} una clave equivalente ---por definición--- y
+un ataque estructural que recupere una descripción decodificante
+rompe el mensaje. Y en sentido inverso: un algoritmo que resolviera
+SD para síndromes \emph{elegidos} por el atacante ---no solo los que
+le da el juego OW-CPA--- podría reconstruir una matriz de paridad del
+código público; informalmente, pidiendo la solución del síndrome
+$\Hmat_j+\Hmat_k$, que es la palabra de peso $2\le t$ única
+$e_j+e_k$, y despejando columnas. Por eso los ataques de
+decodificación también producen, con trabajo adicional, recuperación
+de clave, y las dos familias se vigilan juntas.
+
+\begin{trampa}[«Distinguen McEliece»: titular y matiz]
+Cada pocos años aparece un titular que distingue las claves públicas
+de McEliece de matrices aleatorias. Es un resultado sobre la
+\emph{estructura} del código, y en sí no descifra nada: no se conoce
+ninguna reducción de un distinguidor a un ataque contra el mensaje.
+Lo que un buen distinguidor sí hace es erosionar el argumento
+---informal--- de que «la clave pública no revela nada», y obliga a
+revisar qué garantías dependían de ese parecido. El episodio de 2025
+y 2026 se cuenta con números en los
+capítulos~\ref{ch:estructura} y~\ref{ch:2026}.
+\end{trampa}
+
+\section{Cómo se leen las cifras de seguridad}
+
+Todas las estimaciones de esta parte son \emph{cotas inferiores del
+esfuerzo del mejor ataque conocido}: nada más, y nada menos. Un
+«$2^b$» significa siempre $2^b$ unidades de un modelo de coste
+declarado, en una fecha, contra un objetivo declarado. Los tres
+lenguajes de coste más frecuentes se resumen en la
+tabla~\ref{tab:seg-costes}.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{@{}p{3.2cm}p{4.4cm}p{6.8cm}@{}}
+\toprule
+lenguaje & una unidad es\ldots{} & se usa para\ldots{} y su
+peligro al comparar\\
+\midrule
+operaciones de bits & un XOR, un AND\ldots{} sobre un bit &
+comparar con las referencias tipo NIST (AES-128 $\approx2^{143}$);
+engaña si el ataque trabaja con vectores: un XOR de vectores son
+miles de operaciones de bits\\
+operaciones vectoriales & un XOR entre vectores completos & seguir
+los estimadores de decodificación (las unidades de la
+tabla~\ref{tab:param-seguridad}); engaña a la baja: es «vender
+barato» el trabajo real\\
+tiempo en hardware & un segundo medido & validar implementaciones y
+ataques reales; no extrapola a décadas ni a máquinas futuras\\
+\bottomrule
+\end{tabular}
+\caption{Tres lenguajes de coste. Toda comparación honesta de cifras
+exige fijar las unidades y el modelo de memoria; la
+sección~\ref{sec:param-seguridad} ya dio las advertencias para la
+tabla~\ref{tab:param-seguridad}.}
+\label{tab:seg-costes}
+\end{table}
+
+Un ejemplo de lectura, con la tabla~\ref{tab:param-seguridad} delante.
+Para \texttt{mceliece348864}, el mejor ataque clásico contra el
+mensaje se cotiza en $2^{140{,}8}$ operaciones \emph{vectoriales} con
+memoria $2^{86{,}6}$ (modelo «memoria gratis»), o $2^{158{,}6}$ si la
+memoria se paga; el más simple, Prange, cuesta $2^{173{,}4}$. La
+referencia NIST de categoría~1 es AES-128, estimado en $2^{143}$
+operaciones de bits: comparar $140{,}8$ con $143$ sin más sería un
+error de unidades (la propia guía señala que ese ataque cuenta más de
+$2^{143}$ operaciones de bits, precisamente por eso). Del lado
+cuántico, el mensaje es corto: los algoritmos conocidos ofrecen, en
+el mejor caso, la raíz del exponente clásico ---con sobrecostes
+enormes y supuestos de hardware lejanos~\cite{gidney2021}---, y los
+parámetros se eligen con ese margen en cuenta
+(capítulo~\ref{ch:parametros}); la
+sección~\ref{sec:isd-cuantico} lo cuantifica.
+
+Y cada cifra lleva fecha. Las de la
+tabla~\ref{tab:param-seguridad} proceden de la guía de seguridad del
+equipo (2022)~\cite{cmsecurity}; el capítulo~\ref{ch:2026} actualiza
+el estado del arte a octubre de 2026.
+
+\section{Fuera del modelo: la implementación}
+
+\begin{practica}[El adversario también mira el código]
+Los teoremas y las cifras de esta parte hablan del adversario
+matemático. El adversario real, además: mide tiempos de respuesta
+(las implementaciones de referencia de Classic McEliece están
+escritas para no filtrar secretos por el tiempo~\cite{cmimpl});
+provoca fallos de hardware (un bit invertido en la clave privada
+almacenada puede ser fatal en modelos más allá de IND-CCA2 ---el
+capítulo~\ref{ch:parametros} contó el episodio, las variantes
+\texttt{pc} y las mitigaciones con corrección de errores---); y
+ataca la aleatoriedad (una semilla $\delta$ o un $e$ sesgados rompen
+cualquier KEM por muy dura que sea su matemática). Ninguna de las
+tres cosas la cubre una reducción, y ninguna se arregla con
+parámetros más grandes.
+\end{practica}
+
+\section{Ejercicios}
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=4pt]
+  \item \textbf{Direcciones de implicación.} Con la
+        figura~\ref{fig:seg-mapa} delante: (a)~explique por qué una
+        clave equivalente rompe el mensaje; (b)~explique por qué un
+        rompemensajes «de juego» no se convierte en decodificador
+        general con lo que se sabe; (c)~¿qué implicaciones tiene un
+        distinguidor de claves públicas? ¿Por qué su papel es
+        erosionar supuestos y no descifrar?
+  \item \textbf{SD en el juguete, a mano.} En el juguete del
+        capítulo~\ref{ch:labgoppa}, $n=16$ y $t=2$. Enumere las
+        $1+16+120=137$ palabras de peso $\le2$ y localice la única
+        cuyo síndrome ---en el sentido del
+        capítulo~\ref{ch:labgoppa}--- es $(\hx2,\hx b)$. ¿Por qué
+        la unicidad estaba garantizada de antemano por la distancia
+        mínima? Después compare escalas: enumerar palabras de peso
+        $64$ para \texttt{mceliece348864} ronda $2^{456}$ candidatos,
+        mientras el ataque de Prange se cotiza en $2^{173{,}4}$.
+        ¿De qué vive esa diferencia?
+  \item \textbf{Los cuantificadores de la conjetura.} Escriba la
+        conjetura del recuadro «Rigor» con cuantificadores
+        explícitos: qué algoritmos, sobre qué distribución, con qué
+        éxito, con qué recursos. Explique después por qué estos tres
+        enunciados \emph{no} son equivalentes a ella:
+        (a)~«SD es NP-duro»; (b)~«no existe un algoritmo
+        polinómico»; (c)~«el mejor ataque conocido cuesta
+        $2^{140{,}8}$». ¿Cuál de los tres es, en la práctica, el que
+        sostiene las decisiones?
+  \item \textbf{Leer las columnas.} Explique, sin inventar cifras
+        nuevas, por qué $2^{140{,}8}$ (tabla~\ref{tab:param-seguridad})
+        no contradice la categoría~1 pese a que AES-128 se estima en
+        $2^{143}$: unidades, papel de la memoria $2^{86{,}6}$ y
+        significado de «operaciones vectoriales». Calcule además el
+        factor entre $2^{140{,}8}$ y $2^{158{,}6}$.
+  \item \textbf{La mitad cuántica.} Para \texttt{mceliece348864}, el
+        mejor ataque clásico sin trucos de memoria se cotiza en
+        $2^{151{,}4}$. Calcule su raíz \emph{en el exponente} (la
+        «mitad»), compárela con el listón de ISO del
+        capítulo~\ref{ch:parametros} ($2^{128}$ en su modelo
+        cuántico) y explique, con la historia de ese capítulo, por
+        qué ISO estandarizó igualmente el conjunto \texttt{460896}.
+  \item \textbf{Taxonomía de titulares.} Clasifique cada titular en
+        su familia y capítulo, y diga qué rompe y qué no:
+        (a)~«Un algoritmo distingue las claves públicas de McEliece
+        de matrices aleatorias»; (b)~«Mejora de un factor $2^{10}$
+        en el coste de los ataques de decodificación»; (c)~«Se
+        recupera una clave de un despliegue real midiendo tiempos de
+        respuesta».
+\end{enumerate}

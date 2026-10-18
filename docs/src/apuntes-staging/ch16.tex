@@ -1,0 +1,596 @@
+\chapter{El terremoto: 2025--2026}\label{ch:2026}
+
+\begin{roadmap}
+El capítulo~\ref{ch:estructura} cerró con un muro: recuperar la clave
+privada costaba, en 2022, unos $2^{9116{,}8}$ frente a los
+$2^{140{,}8}$ de la decodificación genérica. Este capítulo cuenta cómo
+ese muro se resquebrajó en tres actos. Primero la grieta
+(2024--2025): un distinguidor subexponencial y su réplica formal.
+Después la primavera de 2026: ataques algebraicos que rompen retos
+públicos y acercan las estimaciones, aún por encima de los niveles
+declarados. Y por fin el verano: el método \emph{holdout}, un
+distinguidor cuasipolinomial de origen insospechado, y una cascada de
+estimaciones de recuperación de clave que caen a $2^{89}$--$2^{149}$
+\emph{por debajo} de los niveles declarados de todos los conjuntos
+---con supuestos heurísticos y sin ataque práctico alguno---. Cerraremos
+con el debate técnico (¿cuánto cuesta mover los bits?), la respuesta
+institucional (el equipo, el BSI, ISO, NIST) y una lectura sobria de
+lo que un lector de este libro debe llevarse. La regla del capítulo:
+separar a cada paso lo demostrado de lo heurístico, y lo heurístico de
+lo titulado.
+\end{roadmap}
+
+\section{La primera grieta (2024--2025)}\label{sec:2026-grieta}
+
+La tradición del capítulo~\ref{ch:estructura} tenía una moraleja
+estadística: cada intento estructural se quedaba corto por miles de
+bits. Esa estadística empezó a romperse en 2024, cuando Hugues
+Randriambololona publicó el \emph{distinguidor de sizigias}
+(«syzygy distinguisher»)~\cite{randriam2024}, publicado después en
+EUROCRYPT~2025. Su hallazgo: las claves públicas de Goppa binaria se
+pueden distinguir de matrices aleatorias con complejidad
+\emph{subexponencial} en la capacidad de corrección del código. Para
+\texttt{mceliece348864}, la estimación rondaba los $2^{529}$; para
+los conjuntos recomendados por el BSI, al menos $2^{683}$ (véase su
+evaluación de 2026~\cite{bsi2026}). Frente a los $2^{9000}$ de la
+tabla~\ref{tab:est-espacios}, la grieta era visible; frente a los
+$2^{140{,}8}$ del mejor ataque genérico, seguía siendo abisal.
+
+La respuesta del equipo llegó el 17 de abril de 2025, en una nota
+fechada titulada precisamente \emph{Notes on a recent claim that a
+\texttt{mceliece348864} distinguisher uses only $2^{529}$
+operations}~\cite{cm529}. Es una pieza ejemplar de metodología, y
+conviene resumir sus tres argumentos porque enmarcan todo lo que
+viene después.
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=3pt]
+  \item \textbf{La seguridad no descansa en la indistinguibilidad.}
+        La cadena del capítulo~\ref{ch:seguridad} va de arriba
+        abajo: IND-CCA2 en el QROM se apoya en OW-CPA del cifrado,
+        y OW-CPA en la dureza de la decodificación. Que la clave
+        pública sea reconocible como Goppa no toca ningún eslabón:
+        el equipo lo ilustra con RSA, cuyas claves se distinguen de
+        enteros aleatorios de forma trivial sin que ello amenace la
+        factorización~\cite{cm529}.
+  \item \textbf{Hay un suelo trivial de $2^{256}$.} La clave privada
+        se genera a partir de una semilla de 256 bits; un atacante
+        puede, en el peor caso, enumerar semillas. Cualquier ataque
+        de recuperación de clave por debajo de $2^{256}$ sería una
+        noticia de primera magnitud; los $2^{529}$ no lo son. Esta
+        observación, casi trivial, se convertirá en la vara de medir
+        del capítulo.
+  \item \textbf{El historial manda prudentemente.} La nota repasa la
+        larga lista de «avances» algebraicos previos ---desde los
+        ataques de 2002 que se anunciaban como amenaza para AES
+        hasta un trabajo de 2010 que se describía como
+        «breakthrough»--- todos ellos digeridos sin consecuencias:
+        el método muere al comparar constantes, o no escala, o
+        confunde distinguir con romper.
+\end{enumerate}
+
+Añadamos dos piezas de contexto. En marzo de 2025, NIST cerró su
+cuarta ronda eligiendo HQC como respaldo basado en códigos y dejó a
+Classic McEliece fuera de la estandarización, anotando en el
+informe IR~8545 que la criptoanálisis reciente «debilita en cierta
+medida el argumento de tratarlo como una opción especialmente
+conservadora» y señalando que \texttt{mceliece460896} ya quedaba
+corto frente a su categoría~\cite{nist8545}. Y en noviembre de 2025,
+el equipo publicó una nota sobre \emph{You Only Decapsulate Once},
+un ataque de canal lateral que explota variaciones de tiempo
+introducidas por compiladores modernos en software criptográfico:
+una advertencia de que la superficie de ataque de una implementación
+no termina en su algoritmo~\cite{cm2025yodo}.
+
+\begin{historia}[De 2002 a 2024: el largo cementerio algebraico]
+La nota del equipo de abril de 2025~\cite{cm529} y la de junio de
+2026~\cite{cm610} enumeran, con paciencia de archivero, las
+promesas algebraicas caídas. La de 2026 abre con un ejemplo de 2002
+que anunciaba coste «subexponencial» contra cifrados de bloque y
+resultó inofensivo; sigue con la lista de trabajos contra McEliece
+---2010: «breakthrough in code-based cryptography»; 2014:
+reducción de Wild--Goppa; 2016: el método de claves compactas de
+Faugère--Otmani--Perret--de~Portzamparc--Tillich; 2023: el
+modelo Pfaffiano de Couvreur--Mora--Tillich; 2024: las sizigias de
+Randriambololona---. La lección del cementerio no es que los papers
+fueran malos: es que durante dos décadas cada funeral corporativo
+se celebraba antes de la autopsia. En 2026, por primera vez, el
+ritual se invertirá: primero las réplicas, después los títulos.
+\end{historia}
+
+\section{La primavera de 2026: de CFS a los retos TII}\label{sec:2026-primavera}
+
+El 3 de marzo de 2026 apareció el primer golpe con \emph{víctima
+real} fuera de los parámetros de Classic McEliece: Bardet, Lemoine y
+Tillich rompieron el esquema de firmas CFS, de 25 años de
+antigüedad, construido sobre códigos de Goppa binarios de tasa muy
+alta, aprovechando el modelo Pfaffiano de 2023 y una búsqueda de
+cuadrados en el ideal correspondiente. El mismo documento recuperó
+las claves de retos de TII «con seguridad declarada de hasta 210
+bits»~\cite{bardet2026}. La letra pequeña salvó a Classic McEliece:
+el ataque vive de tasas de código extremas, y los conjuntos del
+esquema tienen tasas de $0{,}7$--$0{,}8$. Pero el cementerio acababa
+de enterrar un esquema entero.
+
+En junio llegaron dos piezas más. El 10 de junio, Briaud, Lemoine,
+Randriambololona y Tillich (BLRT) publicaron un ataque algebraico
+\emph{subexponencial heurístico} basado en encontrar matrices de
+rango~2 en el código de relaciones cuadráticas asociado a la Goppa;
+con ellas se recupera la estructura secreta y, de ahí, una clave
+equivalente. Rompieron retos TII de 83, 89, 119, 166, 210 y 248
+bits declarados, y una clave CFS en 14 horas y 24\,GB de
+RAM~\cite{briaud2026}. Para los parámetros de Classic McEliece
+nivel~1, los propios autores cifran el ataque en «a lo sumo del
+orden de $2^{454}$». El 23 de junio, el equipo respondió con una
+nota fechada~\cite{cm610}: auditando el cómputo, el coste varía con
+las suposiciones algebraicas entre $2^{454}$ (Wiedemann), $2^{513}$,
+$2^{515}$ (con exponente de multiplicación $2{,}373$), $2^{607}$ y
+$2^{610}$; ninguna variante baja del suelo trivial $2^{256}$
+(ninguno de esos trabajos lo compara, observa el equipo con
+retintín); los retos TII rotos son juguetes ($n\le 1409$) que
+«omiten una de las defensas centrales» al reducir $t$ y con él las
+opciones de $g$; y la narrativa del «ataque que rompe el esquema»
+repite, palabra por palabra, la de 1991.
+
+El 29 de junio, Tobias Hemmert ---del propio BSI--- convirtió en
+recuperación de clave el distinguidor de «anulación de orden
+superior» (\emph{higher-order vanishing}) que él y Andreas Wiemers
+habían presentado en CRYPTO~2026~\cite{hemmert2026,hemmertwiemers2026}:
+los polinomios homogéneos que se anulan con multiplicidad alta en
+las columnas de la matriz de paridad no solo distinguen Goppa de
+aleatorio; su estructura permite reconstruir la clave. Conjetura
+del autor: el coste sería «aproximadamente el mismo que el del
+distinguidor», que el BSI evalúa en al menos $2^{550}$ para los
+conjuntos que recomienda~\cite{bsi2026}. Markku-Juhani Saarinen
+extendió el método (HOVER) sin mejora significativa para estos
+parámetros~\cite{saarinen2026hover}. Balance de la primavera: las
+estimaciones estructurales habían bajado de miles de bits a
+$2^{454}$--$2^{742}$ ---inmensas, pero ya del orden de la decena
+de miles de millones de veces «solo» por encima de los objetivos,
+y con la dirección de la flecha en contra.
+
+\begin{historia}[1991, 1997, 2026: la misma obra, el mismo papel]
+La nota de junio de 2026~\cite{cm610} recuerda el precedente: un
+«criptoanálisis del criptosistema de McEliece» de 1991, que resultó
+ser un ataque sobre un juguete con $n=63$; la historia la contó
+Berson en 1997, y este libro la citó en el capítulo~\ref{ch:kem}
+como anécdota de época. El patrón se repite: una demostración en
+tamaño de juguete, una extrapolación en el titular, una espera de
+quince años hasta saber si el ataque es un embrión o un espejismo.
+La diferencia de 2026 es la velocidad: lo que en 1991 tardó un año
+en replicarse, aquí tarda semanas ---y la propia respuesta del
+equipo está fechada con precisión notarial.
+\end{historia}
+
+\section{El método \emph{holdout} (agosto de 2026)}\label{sec:2026-holdout}
+
+El 7 de agosto de 2026, Ashrujit Ghoshal, Yuval Ishai, Aayush Jain y
+Nuozhou Sun (GIJS) publicaron un distinguidor \emph{cuasipolinomial}
+para Goppa--McEliece en el régimen asintótico del esquema
+($m=\Theta(\log n)$, $t=\Theta(n/\log n)$), con tiempo
+$n^{\mathcal{O}(\log n)}$ y ventaja $1-o(1)$. El origen del método
+es delicioso: nació de un intento \emph{fallido} de construir
+protocolos de recuperación privada de información (PIR) a partir de
+códigos localmente decodificables. El título del
+artículo~\cite{ghoshal2026} lo confiesa: «PIR Meets McEliece».
+
+La idea, en la figura~\ref{fig:2026-holdout}. Las columnas de la
+clave pública son evaluaciones de polinomios secretos: yacen
+---salvo reescalado--- sobre una curva algebraica oculta. El test
+\emph{retira} (hold out) una columna y busca polinomios de bajo
+grado que se anulen con multiplicidad alta en todas las demás. En
+una clave real, esos polinomios también se anulan en la columna
+retirada: es la estructura de curva forzándolo. En una matriz
+aleatoria, solo ocurriría por azar. Ese sesgo, amplificado sobre
+muchas retiradas, es el distinguidor. Así descrito parece poco,
+pero trae la propiedad que ningún distinguidor previo tenía: la
+complejidad crece \emph{cuasipolinomialmente} en el régimen de los
+parámetros, y el método aplica a los cinco conjuntos, con
+estimaciones de $2^{114}$--$2^{124}$ operaciones de bits para el
+test (frente a los $2^{151}$--$2^{287}$ de la decodificación
+genérica), aunque con almacenamiento de exabytes ($2^{66}$--$2^{71}$
+bits) que los autores no intentaron optimizar~\cite{ghoshal2026}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    col/.style={draw=mcblue,fill=mcsky!35,line width=0.4pt},
+    colx/.style={draw=mcorange,fill=mcorange2!70,line width=0.4pt},
+    dot/.style={circle,fill=mcred,inner sep=1.1pt},
+    lbl/.style={font=\scriptsize,align=center},
+    lblt/.style={font=\tiny,color=mcgray,align=center}
+  ]
+  % columnas de la clave publica
+  \foreach \i in {0,1,2,3,4,5,6} {
+    \draw[col] (0.95*\i,0) rectangle +(0.7,1.6);
+  }
+  \draw[colx] (7.1,0) rectangle +(0.7,1.6);
+  \node[lblt] at (2.85,-0.25) {columnas de $G$ (clave pública)};
+  \node[lblt,mcorange] at (7.45,-0.25) {retirada};
+  \draw[-{Stealth[length=2mm]},mcorange,thick]
+    (9.0,2.75) -- (7.85,2.45);
+  \node[lbl,mcorange,text width=3.4cm] at (11.0,2.95)
+    {se retira una columna y se busca un polinomio $P$ que se anule con
+     multiplicidad alta en las demás};
+  % puntos: P se anula
+  \foreach \i in {0,1,2,3,4,5,6} {
+    \node[dot] at (0.95*\i+0.35,1.85) {};
+  }
+  \node[lbl,mcred] at (3.0,2.15) {$P$ se anula en todas ellas};
+  % la retirada: signo de pregunta
+  \node[font=\Large,color=mcorange] at (7.45,1.95) {?};
+  % paneles de respuesta
+  \node[draw=mcgreen,fill=mcgreen2!45,rounded corners=3pt,lbl,
+        text width=3.4cm,inner sep=5pt] at (11.9,1.15)
+    {\textbf{clave Goppa real:}\\[2pt] $P$ también se anula en la
+     retirada (lo fuerza la curva oculta)};
+  \node[draw=mcred,fill=mcred2!45,rounded corners=3pt,lbl,
+        text width=3.4cm,inner sep=5pt] at (11.9,-0.7)
+    {\textbf{matriz aleatoria:}\\[2pt] se anula solo por azar; el
+     test lo delata};
+\end{tikzpicture}
+\caption{El test \emph{holdout} de GIJS~\cite{ghoshal2026}: retirar
+una columna y buscar polinomios de bajo grado que se anulen con
+multiplicidad alta en todas las demás. Sobre una clave real el
+polinomio se anula también en la retirada (estructura de curva);
+sobre una matriz aleatoria, no. La extensión a recuperación de
+clave usa la geometría local de la curva en la columna
+retirada~\cite{vedenev2026,weis2026}.}
+\label{fig:2026-holdout}
+\end{figure}
+
+El 27 de agosto, GIJS añadieron a su artículo los detalles de un
+ataque de \emph{recuperación de clave} heurístico basado en la
+misma maquinaria, con estimaciones de $2^{130{,}4}$ a $2^{149{,}0}$
+según el conjunto, y de un ataque de recuperación de texto plano
+que el equipo evaluó en unos $2^{266}$ para
+\texttt{mceliece6960119}~\cite{ghoshal2026,cm610}. La revisión
+también declaraba, con honestidad ejemplar, que el ataque «no es
+todavía concretamente eficiente» pero que «puede ser relevante para
+los niveles de seguridad de NIST». En paralelo, la réplica pública
+del equipo (21 de agosto) recordaba que un distinguidor no ataca
+los objetivos de seguridad del esquema ---el argumento de
+abril de 2025--- y que la maquinaria no produce, por ahora, ningún
+ataque ejecutable~\cite{bernstein2026,cm529}.
+
+\section{La cascada de septiembre}\label{sec:2026-cascada}
+
+Lo que ocurrió después fue una carrera de tres semanas entre grupos
+---con préstamos cruzados, porque todos parten del test de GIJS---
+para llevar el \emph{holdout} de distinguidor a recuperación de
+clave. Conviene registrar los hitos con fechas, porque la velocidad
+es parte de la historia.
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \textbf{Vedenev (20 de agosto; revisión de octubre).} Extiende
+        el método a la recuperación de clave para subcódigos de
+        GRS (y por tanto alternantes y Goppa): un \emph{único} tipo
+        de ejecución del test recupera la clave, con coste estimado
+        de $2^{89{,}9}$ a $2^{98{,}6}$ operaciones de bits para los
+        parámetros de Classic McEliece. Demostración: claves de los
+        retos TII-173, TII-249 y TII-253, «los dos primeros no
+        resueltos hasta donde sabemos»~\cite{vedenev2026}.
+  \item \textbf{Saarinen (24 de agosto; revisiones).} Publica una
+        contabilidad de costes del método («Holdout»), de $2^{126{,}8}$
+        a $2^{145{,}2}$ según la revisión de septiembre, y resuelve
+        el reto TII-254 ---el más difícil resuelto hasta la fecha
+        en su métrica original, $2^{254}$--- con una variante de dos
+        anclas: dos núcleos de relaciones de dimensión 121, un
+        núcleo común de 80, una geometría proyectiva sobre
+        $\GF{2^8}$, y una secuencia de Krylov final de 27{,}2
+        horas-GPU en aceleradoras NVIDIA~\cite{saarinen2026a,saarinen2026b}.
+  \item \textbf{Weis (11 de septiembre; versión 0.5 de octubre).}
+        Stephen Weis, de Anthropic, mejora el ataque en dos frentes.
+        Primero, el coste de una ejecución baja a $2^{89}$--$2^{98}$
+        operaciones de bits (sin cargo de memoria); pagando cada
+        operación por la memoria que direcciona, a coste de raíz
+        cuadrada, $2^{107}$--$2^{117}$; bajo la regla contable de la
+        guía de seguridad ---que carga el coste de toda la memoria
+        en cada operación---, $2^{117}$--$2^{128}$, contra
+        $2^{159}$--$2^{316}$ de la decodificación genérica en ese
+        mismo modelo. Segundo, dos rutas de recuperación de clave:
+        una apoyada en un teorema que demuestra y que exige entre
+        100 y 1400 ejecuciones; otra, de una sola ejecución, que
+        construye sobre el key recovery de GIJS. «Nada de esto está
+        cerca de lo práctico ---escribe---, y una ejecución a tamaño
+        completo no puede probarse»~\cite{weis2026}.
+  \item \textbf{Apon (26--28 de agosto) y la réplica.} Daniel Apon
+        publica una cota inferior de la ruta de Vedenev: por razones
+        algebraico-geométricas, el número de columnas retiradas que
+        su paso crítico necesita es mayor que $2t+3$; para
+        \texttt{mceliece8192128}, eso implica un coste superior a
+        $2^{1500}$ operaciones de bits. Vedenev respondió con una
+        revisión que añade una segunda ruta
+        («código menor») y sostiene que las objeciones ya no aplican
+        a la versión nueva~\cite{apon2026,vedenev2026}.
+\end{itemize}
+
+La tabla~\ref{tab:2026-costes} reúne las estimaciones publicadas con
+el mismo protocolo: operaciones de bits, sin cargo de memoria, para
+los cinco conjuntos. Es la tabla que en 2022 habría sido ciencia
+ficción: la columna estructural ya no está en los miles de bits.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lccccc}
+\toprule
+conjunto & decodificación & GIJS & Saarinen & Weis &
+AES ref.\\
+ & (ISD, cap.~\ref{ch:parametros}) & (27-ago) & (15-sep) & (v0.5) & (NIST)\\
+\midrule
+\texttt{mceliece348864} & $2^{151{,}4}$ & $2^{130{,}4}$ & $2^{126{,}8}$ & $2^{94{,}3}$ & $2^{143}$\\
+\texttt{mceliece460896} & $2^{193{,}3}$ & $2^{149{,}0}$ & $2^{145{,}2}$ & $2^{99{,}3}$ & $2^{207}$\\
+\texttt{mceliece6688128} & $2^{268{,}0}$ & $2^{141{,}3}$ & $2^{137{,}5}$ & $2^{102{,}4}$ & $2^{272}$\\
+\texttt{mceliece6960119} & $2^{268{,}4}$ & $2^{140{,}5}$ & $2^{136{,}7}$ & $2^{101{,}6}$ & $2^{272}$\\
+\texttt{mceliece8192128} & $2^{303{,}2}$ & $2^{141{,}6}$ & $2^{137{,}5}$ & $2^{102{,}4}$ & $2^{272}$\\
+\bottomrule
+\end{tabular}
+\caption{La fotografía de octubre de 2026, en operaciones de bits y
+sin cargo de memoria. La columna ISD es el mejor ataque genérico sin
+trucos de memoria (guía de seguridad; capítulos~\ref{ch:parametros}
+y~\ref{ch:isd}). Las columnas de 2026 son estimaciones
+\emph{condicionales}, apoyadas en supuestos heurísticos, de ataques
+de recuperación de clave: GIJS (revisión del 27 de agosto, su
+tabla~3), Saarinen (revisión del 15 de septiembre) y Weis (versión
+0.5 de octubre, tabla~1)~\cite{ghoshal2026,saarinen2026a,weis2026}.
+La última columna es la referencia de NIST para las categorías
+1/3/5 (búsqueda de clave sobre el AES correspondiente). Ninguna de
+las cifras de 2026 corresponde a un ataque ejecutado ni ejecutable
+en hardware real.}
+\label{tab:2026-costes}
+\end{table}
+
+Un matiz imprescindible, del propio equipo: los retos TII resueltos
+---$n=214$, $n=223$--- tienen $t$ diminutos y por tanto pocas
+opciones de polinomio $g$; «omiten una de las defensas centrales»
+del esquema~\cite{cm610}. Que la maquinaria digiera juguetes no
+prueba que digiera los conjuntos reales: eso lo dirá el tiempo, o
+una ejecución a escala que nadie ha hecho.
+
+\section{El debate de los costes}\label{sec:2026-costes}
+
+Los números de la tabla~\ref{tab:2026-costes} comparten un supuesto
+silencioso: que una operación de bits cuesta lo mismo que cualquier
+otra. Daniel Bernstein lo atacó de frente en el foro de NIST. Un
+\emph{run} del ataque es una cadena de $2^{32}$ a $2^{36}$ pasadas
+mutuamente dependientes sobre un array de 28 a 540~TiB
+($2^{47{,}8}$--$2^{52{,}1}$ bits); el ataque contra
+\texttt{mceliece348864} movería del orden de $2^{93}$ bits entre
+memoria y unidades aritméticas. Enrutar esos bits a la velocidad de
+interconexión de los superordenadores actuales, calculaba Bernstein,
+llevaría unos 90\,000 años, solo para esa componente; y las cotas
+de área-tiempo de Brent--Kung sugieren que ningún trazado de
+circuito elimina el peaje. La misma asimetría se esconde en la
+comparación con AES: la búsqueda de claves no toca memoria, se
+amortiza entre muchos objetivos y gana con Grover; el
+\emph{holdout} no hace nada de eso~\cite{bernstein2026}.
+
+Weis, lejos de esquivar el golpe, lo incorpora: su artículo admite
+que no conoce distribución de datos que haga local el acceso, y
+ofrece la escalera completa de modelos contables. Con cargo de
+raíz cuadrada ---un modelo con precedente en la propia guía---, una
+ejecución cuesta $2^{107}$--$2^{117}$: aún por debajo de la
+decodificación genérica con memoria libre. Con la regla más severa
+de la guía, $2^{117}$--$2^{128}$. La discusión no es bizantina: es
+\emph{el mismo} debate metodológico del capítulo~\ref{ch:isd},
+ahora aplicado a la otra orilla. Y tiene precedente ilustre: en
+2020, el propio Bernstein argumentó que NIST aplicó a Kyber-512 la
+vara de las compuertas clásicas ($2^{143}$), y NIST respondió que
+tiende a dar el beneficio de la duda a un conjunto cuyos ataques
+quedan a pocos bits de la categoría. Aquí la distancia no es de
+pocos bits: bajo el modelo más severo, Weis estima 25 bits bajo la
+categoría~1 para \texttt{mceliece348864} y 82--145 bits bajo las
+categorías del resto de conjuntos; y Apon declaró el 1 de octubre
+tener un análisis no publicado que sitúa el nivel~1 en
+$2^{89}$--$2^{92}$ \emph{incluyendo} costes de memoria, pero
+decidió no publicarlo «para no perjudicar a los usuarios
+actuales»~\cite{weis2026,bernstein2026}.
+
+\begin{rigor}[Demostrado, heurístico, estimado: el mapa de 2026]
+La contabilidad honesta de esta historia tiene tres columnas.
+(1)~\textbf{Demostrado}: el distinguidor de GIJS está probado (en
+su régimen asintótico), y Weis prueba varios enunciados sobre
+Goppa binaria que sostienen su ruta. (2)~\textbf{Heurístico}: la
+recuperación de clave a tamaño real depende de supuestos de rango
+y genericidad ---Weis enumera cinco, los prueba en claves pequeñas
+y en retos TII ($n=214$ frente a $n\ge3488$) y argumenta por qué
+las desviaciones observadas no ocurrirían a escala---; el grado
+del ataque es 7; el paso caro (el cómputo de núcleos) no se ha
+ejecutado contra ningún conjunto real. (3)~\textbf{Estimado}: todas
+las cifras de la tabla~\ref{tab:2026-costes} dependen de un modelo
+de costes ---el de las operaciones de bits desnudas--- que el
+propio equipo disputa, y que mueve las cuentas 20--30 bits según
+el cargo. Nada de la columna (2)~(3) convierte a 2026 en «McEliece
+roto»; nada de la columna (1) permite ya decir «McEliece inmune».
+El estado del arte es exactamente eso: un arte, con supuestos
+declarados y réplicas en curso.
+\end{rigor}
+
+\section{La respuesta institucional}\label{sec:2026-institucional}
+
+El equipo de Classic McEliece sostuvo durante todo el otoño una
+posición pública en dos capas. Como equipo: la réplica del 21 de
+agosto al distinguidor ---no ataca los objetivos, no hay ataque
+ejecutable--- y la evaluación del ataque de texto plano
+($\approx 2^{266}$ para \texttt{mceliece6960119}). Y la respuesta
+fechada de junio~\cite{cm610}. Como individuos: Bernstein mantuvo,
+el 30 de septiembre, que ninguna nación-estado tiene recursos para
+ejecutar los ataques, que estos no ganan nada con múltiples
+objetivos ni con computación cuántica, y que su evaluación relativa
+---ML-KEM con más riesgo que McEliece--- no había cambiado. La
+pregunta directa de Filippo Valsorda ---¿sigue el equipo
+recomendando sus conjuntos estandarizados?--- no había recibido
+respuesta etiquetada como del equipo a fecha de cierre de este
+libro~\cite{bernstein2026}.
+
+El movimiento decisivo fue del BSI, el 1 de octubre de 2026, en una
+nota de cuatro páginas fechada el 29 de septiembre~\cite{bsi2026}.
+Su evaluación, en orden: los distinguidores previos no amenazaban
+los supuestos (el de sizigias, $\ge 2^{683}$; el de
+Hemmert--Wiemers, $\ge 2^{550}$; BLRT, $\ge 2^{742}$); los métodos
+de agosto --octubre sí merecen acción, con cifras de $2^{120}$--$2^{124}$
+(distinguidor GIJS) y $2^{140}$--$2^{148}$ (recuperación GIJS) para
+los conjuntos de su guía, y $2^{99}$--$2^{102}$ en la contabilidad
+de Weis; los resultados «no permiten todavía un ataque práctico»,
+pero la mejora estructural «es significativa» y se esperan más.
+Conclusión operativa: Classic McEliece «no debería seguir usándose
+en nuevos desarrollos»; para intercambio de claves, preferir
+ML-KEM o FrodoKEM, y HQC cuando su estándar aparezca; los
+despliegues híbridos existentes conservan al menos la seguridad de
+la mitad clásica; y la recomendación formal se revisará en
+TR-02102-1 a principios de 2027. El BSI añadió una lección de
+migración: los resultados «subrayan la importancia de la
+\emph{crypto-agility}», y ninguno de los ataques toca a los otros
+esquemas recomendados ---ni a HQC, que no usa códigos de Goppa ni la estructura
+oculta que estos ataques explotan~\cite{bsi2026}.
+
+En paralelo, el ecosistema: NIST dejó la puerta abierta a
+estandarizar McEliece más adelante, pero su IR~8545 ya había
+elegido HQC y anotado los recortes de \texttt{mceliece460896}; ISO
+publicó en junio de 2026 su enmienda con los cuatro conjuntos
+grandes ---sin \texttt{mceliece348864}, el más expuesto a los
+nuevos métodos--- y cada uno de esos cuatro tiene ahora
+estimaciones por debajo de su nivel declarado; las agencias
+europeas divergen (ANSSI ya lo situaba por debajo de ML-KEM,
+FrodoKEM y HQC; el manual holandés lo tenía por conservador; la
+NCSC sueca solo bendice estándares NIST); y los despliegues reales
+---túneles VPN de Mullvad, Rosenpass, PQConnect---, todos en modo
+híbrido, activaron sus protocolos de revisión~\cite{bernstein2026,bsi2026,nist8545}.
+
+\begin{trampa}[Los dos titulares fáciles]
+Desde agosto de 2026 circulan dos frases gemelas, y ambas son
+falsas. «\emph{McEliece ha caído}»: nadie ha recuperado una clave
+ni descifrado un texto de ningún conjunto real; los propios
+autores de los ataques lo repiten; el ataque más caro de ejecutar
+---el cómputo de núcleos--- no se ha corrido a escala; los retos
+rotos son juguetes. «\emph{McEliece es inmune}»: las estimaciones
+de recuperación de clave de tres grupos independientes están por
+debajo de los niveles que el propio esquema declaró, el BSI ---que
+lo recomendaba desde 2020--- ha pedido detener nuevos despliegues,
+y la incógnita no es si los supuestos heurísticos fallarán, sino
+cuándo y cuánto. La versión utilizable de la verdad tiene tres
+cláusulas y ninguna es un titular: nadie ha roto nada, muchas
+estimaciones condicionales han bajado de los niveles declarados, y
+la comunidad tarda años en digerir cuánto pesa cada supuesto. Quien
+lea una sola de las dos frases, que relea este recuadro.
+\end{trampa}
+
+\section{Lectura final}\label{sec:2026-lectura}
+
+¿Qué debe llevarse el lector de este libro de todo el terremoto?
+Cuatro cosas, ninguna grandilocuente.
+
+\textbf{Primera: la criptografía finita se juega en los márgenes.}
+Los conjuntos de Classic McEliece llevaban cuarenta y ocho años
+fuera de rango de todos los ataques estructurales conocidos, y
+estaban elegidos contra \emph{un modelo} de ataque (la
+decodificación genérica) con márgenes que la propia guía declaraba
+para el otro modelo en miles de bits. El método \emph{holdout}
+apareció fuera de ese modelo, traído de la teoría de PIR, y la
+lección no es «los márgenes eran falsos» sino la del
+capítulo~\ref{ch:seguridad}: \emph{seguridad es la mejor estimación
+disponible más los supuestos, y los supuestos envejecen}.
+
+\textbf{Segunda: el eje manda.} Weis midió que el coste del
+\emph{holdout} crece unos ocho bits por cada unidad del grado $m$
+del cuerpo, y apenas depende de $n$: por eso sus conjuntos
+recomendados (todos con $m=12$ o $13$) se comportan en bloque. Sus
+ilustraciones ---$m=18$, $26$, $34$, con claves de $0{,}6$, $2{,}1$ y
+$7{,}1$ megabytes--- y la instancia de Bernstein ($m=18$,
+$n=6176$, $t=112$, clave de~1\,MB, texto cifrado de 252 bytes,
+ejecución estimada en $2^{142}$) dibujan la dirección de una
+futura re-parametrización: cuerpos más grandes, $n$ bien por debajo
+de $2^m$, claves más grandes. Nadie ha propuesto tal conjunto para
+estandarización, y Weis lo etiqueta «ilustraciones»~\cite{weis2026}.
+
+\textbf{Tercera: la asimetría de las pruebas.} El distinguidor está
+probado; la recuperación de clave, no. Los experimentos existen
+solo en tamaño de juguete. Quien compare las cotas del capítulo
+con las de este debe recordar la dirección del rigor: una
+estimación heurística baja no convierte a un esquema en roto ---ni
+una superioridad histórica lo convierte en intacto. La única
+moneda válida es la misma que usa este libro desde la
+página~1: enunciar el modelo, citar la fuente, y separar lo
+demostrado de lo conjeturado.
+
+\textbf{Cuarta: esto es historia viva.} A la fecha de este libro
+(octubre de 2026), las réplicas siguen circulando (la última
+revisión de Vedenev es del 7 de octubre), el BSI revisará su guía a
+principios de 2027, ISO mantiene publicado su estándar, y las
+estimaciones de los distintos grupos ---dentro del mismo marco---
+difieren en decenas de bits. Cualquier lector que llegue a estas
+páginas años después debería buscar la actualización de la
+guía~\cite{cmsecurity}, las respuestas fechadas del equipo
+---la serie de notas continuará--- y las réplicas de las revistas
+que aún están por llegar. El resto del libro no depende de la
+resolución del terremoto: el mecanismo, los conjuntos, la ISO, el
+laboratorio, todo lo anterior sigue siendo exactamente lo que las
+páginas describen. Lo que cambia es la conversación sobre si
+conviene usarlo, y esa conversación, por primera vez en la historia
+del esquema, está abierta.
+
+\section{Ejercicios}
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=4pt]
+  \item \textbf{El muro de 2022 contra el suelo de 2026.}
+        (a)~Compare la mejor estimación estructural de la
+        tabla~\ref{tab:est-espacios} para \texttt{348864}
+        ($2^{9116{,}8}$) con la de Weis ($2^{94{,}3}$): calcule la
+        diferencia de exponentes y comente en dos líneas por qué
+        \emph{no} es el «mismo ataque mejorado» (pista: ¿qué
+        familia de métodos estaba agotada y cuál es nueva?).
+        (b)~Compare ahora $2^{94{,}3}$ con el suelo trivial $2^{256}$
+        de la respuesta del equipo~\cite{cm529}: ¿qué implica que
+        la estimación esté por debajo?
+  \item \textbf{Una ejecución, cien ejecuciones.} Con la ruta de
+        Weis que exige entre 100 y 1400 ejecuciones, calcule el
+        coste total si una ejecución cuesta $2^{89}$ (sin memoria)
+        y si cuesta $2^{117}$ (con cargo severo). Encaje ambos
+        resultados con la afirmación «esta es nuestra mejor
+        estimación; con el cargo de la guía queda por debajo de la
+        decodificación genérica en ese modelo».
+  \item \textbf{El eje m.} Partiendo de $2^{94{,}3}$ ($m=12$) y de
+        la regla de Weis (unos 8 bits por unidad de $m$), estime el
+        coste para $m=18$ y compárelo con la instancia de Bernstein
+        ($n=6176$, $t=112$), cifrada en $\approx 2^{142}$.
+        ¿Cuánto sube la clave pública (en MB) frente a las actuales?
+  \item \textbf{Distinguir, recuperar, romper.} Clasifique cada
+        afirmación como demostrada, heurística o estimada, usando
+        el recuadro de rigor: (a)~«las claves de Goppa binaria se
+        distinguen de matrices aleatorias con ventaja
+        $1-o(1)$»; (b)~«recuperar la clave de \texttt{8192128}
+        cuesta $2^{102{,}4}$»; (c)~«el ataque de Vedenev cuesta
+        esencialmente una ejecución»; (d)~«nadie ha ejecutado el
+        cómputo de núcleos contra un conjunto real».
+  \item \textbf{El debate de la memoria, aplicado.} Use la
+        analogía de AES del capítulo~\ref{ch:isd} (tabla de
+        equivalencias) y explique, en cinco líneas, por qué
+        comparar $2^{94{,}3}$ con $2^{143}$ (AES-128) favorece al
+        ataque, mientras que comparar $2^{117}$--$2^{128}$ con
+        $2^{143}$ favorece al esquema. ¿Qué información falta para
+        cerrar la comparación en un sentido o en otro?
+  \item \textbf{Los titulares.} Escriba su propio titular de
+        longitud máquina (menos de 80 caracteres) para la noticia
+        del 1 de octubre de 2026, que sea \emph{verdadero} según el
+        recuadro de trampa, y otro deliberadamente falso en cada
+        dirección. Intercámbielos con un colega y discutan qué
+        cláusula falta en cada uno.
+\end{enumerate}
+
+\begin{center}\rule{0.55\textwidth}{0.4pt}\end{center}
+\medskip
+\noindent\textit{Cierre de la parte~\ref{part:seguridad}.} Cuatro
+capítulos para responder a la pregunta «¿qué significa romper
+McEliece?»: los objetivos y la cadena de reducciones
+(capítulo~\ref{ch:seguridad}); la trinchera de la decodificación
+genérica y sus pliegos de costes (capítulo~\ref{ch:isd}); el muro
+estructural y su anatomía (capítulo~\ref{ch:estructura}); y el
+terremoto de 2025--2026 con su balance aún abierto
+(capítulo~\ref{ch:2026}). Nadie ha roto Classic McEliece ---no
+existe un ataque práctico, y cada estimación baja de los niveles
+declarados viaja con supuestos explícitos--- pero las cifras de esa
+orilla han cambiado de siglo en cuatro años, y con ellas la
+conversación pública. La parte final del libro vuelve al suelo: las
+implementaciones, el ecosistema que ya existe, y el balance de lo
+que este esquema significa para quien lee.

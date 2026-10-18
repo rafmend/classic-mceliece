@@ -1,0 +1,71 @@
+This is a statement from the Classic McEliece team regarding the paper
+"You Only Decapsulate Once".
+
+Compiler modifications have introduced timing variations throughout the
+existing cryptographic software ecosystem. For example, problematic
+patches to gcc and llvm in November 2021 and July 2022 ended up in
+subsequent releases of gcc and clang. These patches often convert 1-bit
+data paths into branches.
+
+Daniel J. Bernstein, a member of the Classic McEliece team, issued a
+public alert regarding this general compiler problem in April 2024.
+There have been many subsequent examples illustrating the breadth of the
+problem, such as an easy June 2024 attack demo for some Kyber/ML-KEM
+software compiled with these compilers. For a survey of what has
+happened, see https://cr.yp.to/papers.html#cryptoint from April 2025.
+
+The problem was caught by TIMECOP (version 2), which is a component of
+SUPERCOP, a cryptographic test framework continually reporting results
+from many different computers. TIMECOP tests binaries produced by gcc
+and clang with various compiler options for many different cryptographic
+implementations. Our Classic McEliece software, starting with the
+November 2021 release, includes full support for TIMECOP. Furthermore,
+our test suite built into libmceliece, starting with the July 2024
+release, automatically applies TIMECOP-type tests to the libmceliece
+binaries.
+
+Testing binaries before deployment protects the end user by preventing
+the source code from being used with compiler versions that cause
+problems. Porting the source code to those compiler versions then
+requires changing the source code, preferably in advance or at the
+latest in response to test failures.
+
+To support this process, Bernstein developed a library called cryptoint
+that takes central responsibility for safely carrying out basic integer
+operations. So far he has published changes to 4731 lines of code in 184
+different cryptographic primitives in SUPERCOP to call the cryptoint
+functions. For Classic McEliece, conversion has focused on the "vec" and
+"avx" implementations used in libmceliece. The slower "ref" and "sse"
+implementations are not used in libmceliece but have already been
+partially converted.
+
+The paper "You Only Decapsulate Once" claims novelty for, e.g., the
+observation that a current version of clang can convert our older
+"same_mask" function into variable-time binaries. This observation is
+not new: this is exactly why our software starting in 2024 switched to a
+safe crypto_uint16_equal_mask function provided by cryptoint.
+
+The paper incorrectly claims that the security issues here have been
+overlooked. The paper incorrectly claims to attack the latest Classic
+McEliece software; the paper actually targets PQClean, which is years
+out of date (and includes many modifications not from us). Regarding
+defenses, the paper proposes a "workflow" for using valgrind, without
+explaining how this is supposed to be better than current use of TIMECOP
+(which also uses valgrind).
+
+The paper cites https://cr.yp.to/papers.html#cryptoint (by title without
+a URL), while ignoring everything stated there regarding the
+announcements of the compiler problem in 2024, regarding identification
+of how the problem happened, regarding TIMECOP, regarding similar tests
+being built into libmceliece, etc.
+
+More broadly, the paper ignores the alerts that we have already issued
+regarding this compiler problem, and ignores the successful protections
+that we have already deployed, most importantly the testing of binaries.
+We do not mean to suggest that these compiler problems are unimportant:
+on the contrary, this is a problem for the whole cryptographic software
+ecosystem, and we have been leaders in finding and addressing the
+problem. We are entitled to proper credit, and users are entitled to
+accurate information about the defenses that are already available.
+
+Please let us know if you have any questions.

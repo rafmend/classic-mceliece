@@ -1,0 +1,222 @@
+% ======================================================================
+%  CAPÍTULO 17 — PREGUNTAS FRECUENTES
+% ======================================================================
+
+\part{Cierre}\label{part:cierre}
+
+\chapter{Preguntas frecuentes}\label{ch:faq}
+
+\begin{roadmap}
+Dieciséis capítulos de teoría, tres laboratorios y dos años de
+literatura convulsa dejan, al final, las preguntas de siempre: ¿qué
+es esto?, ¿por qué así?, ¿está roto?, ¿lo uso? Este capítulo las
+responde en formato breve y con punteros exactos a las partes donde
+cada respuesta está desarrollada. Si solo se va a leer una sección
+del libro después de la introducción, que sea esta; si algo de aquí
+resulta sorprendente o insuficiente, los punteros llevan al capítulo
+correspondiente.
+\end{roadmap}
+
+\section{El esquema, en preguntas cortas}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=5pt]
+  \item \textbf{¿Qué es Classic McEliece, en una frase?} Un KEM
+        post-cuántico: el criptosistema de McEliece (1978) en la
+        forma dual de Niederreiter, con códigos de Goppa binarios,
+        estandarizado por ISO en 2026. Es famoso por dos extremos:
+        las claves públicas más grandes de la criptografía
+        moderna---de $261\,120$ a $1\,357\,824$ bytes---y algunos de
+        los criptogramas más pequeños ($96$--$208$ bytes). Su
+        seguridad se ancla en la dureza conjetural de la
+        decodificación por síndromes, un problema bajo escrutinio
+        desde 1962~\cite{cmspec,cmsecurity}.
+
+  \item \textbf{¿Es «el McEliece de 1978» o es otra cosa?} El mismo
+        esqueleto (códigos de Goppa, trampa de Patterson), con tres
+        piezas reingenierizadas: la forma dual, donde el mensaje es
+        un vector de error de peso fijo y no un texto; la forma
+        sistemática con semilla de 32 bytes, que reduce el
+        almacenamiento y hace reproducible la generación
+        (capítulo~\ref{ch:keygen}); y el transformado a KEM con
+        rechazo implícito (capítulos~\ref{ch:kem}
+        y~\ref{ch:encapdecap}). La trampa---decodificar es fácil con
+        $g$ y $\alpha$ y es el problema duro sin
+        ellos---es exactamente la de~\cite{mceliece1978}.
+
+  \item \textbf{¿Por qué las claves públicas son gigantescas?}
+        Porque la clave pública es, precisamente, una matriz binaria
+        aleatoria de $mt\times k$ bits (la $T$ de
+        $(\mathrm{I}_{mt}|T)$). No hay anillo ni estructura que la
+        comprima, y esa ausencia de estructura es parte del argumento
+        de seguridad: menos álgebra visible, menos superficie para el
+        criptoanálisis estructural (capítulo~\ref{ch:estructura}).
+        El contraste está en la tabla~\ref{tab:param-contexto}: unas
+        $200$ veces las claves de ML-KEM; a cambio, criptogramas
+        entre $5$ y $8$ veces más pequeños~\cite{cmsecurity}.
+
+  \item \textbf{¿Cifra mensajes o claves?} Es un KEM: acuerda una
+        clave de sesión de $32$ bytes, que después cifra el mensaje
+        en un esquema simétrico (AES-GCM, ChaCha20). En un protocolo
+        real se combina en híbrido con un intercambio clásico
+        (X25519): si un lado cae, el otro sostiene; los despliegues
+        conocidos usan todos el modo
+        híbrido~\cite{cmimpl,bernstein2026}.
+
+  \item \textbf{¿Qué tan rápido es?} En los términos de conteo del
+        capítulo~\ref{ch:encapdecap}: la encapsulación es una
+        multiplicación matriz-vector sobre la clave pública
+        (XORs; $\sim2^{23{,}4}$ operaciones de bit en el conjunto
+        mayor) más los hashes; la desencapsulación añade Patterson.
+        Lo caro es la \emph{generación} (reintentos de
+        $\textsf{MatGen}$: $\sim3{,}4$ de media en la forma base,
+        una sola en las variantes \texttt{f}), pero ocurre una vez
+        por clave~\cite{cmrationale}.
+
+  \item \textbf{¿Por qué el «mensaje» es un vector de error?} Porque
+        el problema duro de un código es el síndrome: dada
+        $C=He$, recuperar $e$ es exactamente
+        decodificar (capítulo~\ref{ch:isd}). La especificación no
+        disimula el corazón del problema: se lo pide al atacante en
+        su forma desnuda, y restaura la uniformidad con el
+        transformado a KEM (capítulos~\ref{ch:kem}
+        y~\ref{ch:encapdecap}).
+
+  \item \textbf{¿Qué hay dentro de una clave secreta?} En el
+        conjunto mayor, $14\,120$ bytes: los $12\,800$ que codifican
+        el orden de los elementos $\alpha$ (red de Benes), los
+        $1\,024$ del vector de rechazo $s$, los $256$ del polinomio
+        $g$ y las semillas ($40$). El orden de $\alpha$, no el
+        código---que es público---, es el secreto
+        (capítulo~\ref{ch:keygen}).
+\end{enumerate}
+
+\section{Ecosistema y estándares}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=5pt,start=8]
+  \item \textbf{¿Está estandarizado?} Sí, por ISO/IEC: la
+        Enmienda~2 a la 18033-2 (junio de 2026) incluye Classic
+        McEliece con cuatro tamaños y cuatro variantes---$16$
+        perfiles---junto a ML-KEM y FrodoKEM~\cite{iso18033,cmiso}.
+        El NIST \emph{no} lo estandarizó: su proceso de KEMs cerró
+        en marzo de 2025 con HQC, y en 2025 aplazó la decisión sobre
+        McEliece citando la estandarización ISO en
+        curso~\cite{nist8545,cmnist}. Norma ISO hay; FIPS, no.
+
+  \item \textbf{¿Dónde se usa hoy?} En despliegues ligados a la
+        transición post-cuántica: túneles VPN (Mullvad), Rosenpass,
+        PQConnect, y en el ecosistema de implementaciones
+        liboqs/PQClean y SUPERCOP~\cite{bernstein2026,cmimpl}.
+        Todos en modo híbrido.
+
+  \item \textbf{¿Por qué el NIST lo dejó fuera?} Por ingeniería, no
+        por criptoanálisis: cientos de kilobytes de clave pública no
+        encajan en sus casos de uso objetivo (TLS de alto
+        volumen), y en 2025 pesó la coexistencia con ISO. Es el
+        patrón de toda la historia del esquema: seguridad cómoda,
+        ergonomía incómoda (capítulo~\ref{ch:parametros}).
+
+  \item \textbf{¿Qué fue «You Only Decapsulate Once»?} Una
+        afirmación de 2025 sobre ataques de desencapsulación
+        múltiple; el equipo respondió con su documento del 20 de
+        noviembre~\cite{cm2025yodo}. Precursor del patrón de
+        2025--2026: afirmación fuerte, respuesta pública,
+        contabilidades en desacuerdo (capítulo~\ref{ch:2026}).
+\end{enumerate}
+
+\section{Seguridad: qué se sabe y qué no}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=5pt,start=12]
+  \item \textbf{¿Está roto?} No. A octubre de 2026 no hay ataque
+        práctico contra ningún conjunto, ni recuperación de clave
+        ejecutada contra una clave real, ni rotura de los retos de
+        la especificación. Pero el tono cambió: aparecieron
+        distinguidores que alcanzan el régimen real (GIJS, BLRT,
+        Hemmert--Wiemers) y estimaciones de recuperación muy por
+        debajo de ciertas cifras declaradas---de $2^{99}$--$2^{102}$
+        en la contabilidad de una sola ejecución de Weis a
+        $2^{140}$--$2^{148}$ en las estimaciones del BSI---frente a
+        los $2^{140{,}8}$--$2^{275{,}6}$ del modelo clásico de
+        memoria libre según el conjunto~\cite{ghoshal2026,weis2026,bsi2026}.
+
+  \item \textbf{¿Qué significa «distinguir», exactamente?} Que un
+        algoritmo decide si una matriz pública es de Goppa o
+        aleatoria. No recupera $e$ ni la clave: es una propiedad más
+        débil (figura~\ref{fig:seg-cadena}). Durante décadas los
+        distinguidores vivieron en regímenes que McEliece no usa;
+        los de 2026 alcanzan los parámetros reales, aunque con
+        costes aún fuera de alcance y sin reducción conocida de
+        distinguir a romper~\cite{ghoshal2026}.
+        Capítulos~\ref{ch:estructura} y~\ref{ch:2026}.
+
+  \item \textbf{¿Y la amenaza cuántica?} No hay rotura cuántica
+        conocida: Shor no aplica (no hay grupo abeliano oculto), y
+        los mejores ataques cuánticos ganan a lo sumo la mitad del
+        exponente~\cite{kachigar2017}. ISO partió esos exponentes y
+        exigió $\ge2^{128}$: excluyó a \texttt{mceliece348864} y
+        admitió los demás con matices~\cite{iso18033,cmiso}
+        (capítulo~\ref{ch:parametros}).
+
+  \item \textbf{¿Qué dice el BSI?} Su nota del 29 de septiembre de
+        2026 es la advertencia institucional más dura recibida: los
+        métodos de agosto--octubre merecen tomarse en serio; «no
+        debería seguir usándose en nuevos desarrollos»; los
+        despliegues híbridos existentes conservan la mitad clásica;
+        recomienda ML-KEM, FrodoKEM y HQC, y revisará su
+        TR-02102-1~\cite{bsi2026}.
+
+  \item \textbf{¿Y qué responde el equipo?} Que ningún ataque
+        completo está verificado; que las cifras agresivas dependen
+        de contabilidades discutibles (operaciones de bits, memoria
+        gratis, pasos heurísticos no ejecutados); y que el suelo
+        trivial de recuperación de clave es $2^{256}$, la búsqueda
+        exhaustiva de la semilla de 32 bytes~\cite{cm529,cm610,bernstein2026}.
+        El desacuerdo es técnico, público y está abierto
+        (capítulo~\ref{ch:2026}).
+\end{enumerate}
+
+\section{Práctica: elegir, desplegar, verificar}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=5pt,start=17]
+  \item \textbf{¿Qué conjunto y qué variante elegir?} La
+        recomendación del equipo es simétrica y simple: los seis
+        dígitos para uso a largo plazo (\texttt{mceliece6688128},
+        \texttt{mceliece6960119}); tamaños intermedios solo con
+        presupuesto ajustado; \texttt{f} si el coste de generación
+        importa ($<2^{-30}$ de reintento, sin efecto apreciable en
+        seguridad); \texttt{pc}/\texttt{pcf} si se quiere
+        confirmación de conocimiento del error ($+32$
+        bytes)~\cite{cmsecurity,cmiso}. La guía completa está en el
+        capítulo~\ref{ch:parametros}.
+
+  \item \textbf{¿Cómo verifico una implementación?} Con los
+        vectores de prueba de la especificación: la clave entera es
+        reproducible bit a bit desde la semilla de 32 bytes, así
+        que cualquiera regenera clave y criptograma y compara. Para
+        C portable están PQClean y liboqs; para medidas
+        comparables, SUPERCOP~\cite{cmimpl}.
+
+  \item \textbf{¿Y si tengo que decidir hoy?} Tres reglas
+        prudentes, coherentes con la nota del
+        BSI~\cite{bsi2026}: (1)~en entornos con guía BSI, no
+        iniciar despliegues nuevos y preferir ML-KEM, FrodoKEM o
+        HQC; (2)~donde ya haya Classic McEliece, mantener el modo
+        híbrido y monitorizar la literatura (la mitad clásica cubre
+        la eventualidad de una degradación del componente
+        post-cuántico); (3)~si el diseño exige diversidad de
+        familias, tratar los tamaños \texttt{6*} como el mínimo
+        razonable y revisar los resultados de 2025--2026 antes de
+        congelar parámetros~\cite{cm610,cmsecurity}.
+\end{enumerate}
+
+\begin{observacion}{La respuesta honesta a «¿lo uso?»}{faq-uso}
+Ningún documento de 2026---ni los ataques, ni la nota del BSI, ni
+las réplicas del equipo---afirma que Classic McEliece esté roto
+(octubre de 2026). Y ninguno autoriza a ignorar la tendencia. La
+cifra que mejor resume el momento es la del capítulo~\ref{ch:2026}:
+las estimaciones agresivas bajaron de $2^{9116}$ a $2^{94}$--$2^{102}$
+en \emph{una parte} de la contabilidad, mientras la otra sigue en
+$2^{142}$--$2^{150}$; la distancia entre ambas contabilidades es,
+literalmente, un problema abierto. Un usuario racional hace lo que
+hacen los usuarios reales: híbrido, tamaños grandes, seguimiento
+activo, y cero apuestas a que el desacuerdo se resuelva a su favor.
+\end{observacion}

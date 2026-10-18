@@ -1,0 +1,408 @@
+\chapter{Ataques estructurales: recuperar la clave privada}\label{ch:estructura}
+
+\begin{roadmap}
+Los ataques de decodificación del capítulo~\ref{ch:isd} tratan la
+clave pública como una matriz aleatoria y van a por el error $e$.
+Esta otra familia hace lo contrario: explota que detrás de la matriz
+hay \emph{estructura} ---un polinomio de Goppa $g$ y un soporte
+ordenado $\alpha_0,\dots,\alpha_{n-1}$--- y ataca directamente la
+clave privada. Es la familia que durante casi medio siglo pareció
+una promesa rota: soportes que se dividen, distinguidores que
+reconocen a Goppa, y aun así un muro de $2^{9116{,}8}$ donde el
+mejor ataque genérico cuesta $2^{140{,}8}$. Veremos por qué el diseño
+se blindó contra ella ($n<q$), mediremos el abismo con una figura, y
+dejaremos el terreno preparado para el terremoto de 2025--2026 del
+capítulo~\ref{ch:2026}. Este es el capítulo que responde a la
+pregunta «¿y si atacan la clave en vez del mensaje?».
+\end{roadmap}
+
+\section{Dos cajas fuertes: la anatomía de la clave privada}
+
+Recordemos qué hay dentro de una clave privada (capítulo~\ref{ch:goppa}):
+un polinomio de Goppa
+\[
+  g(x) \;=\; g_t x^{t} + g_{t-1}x^{t-1} + \cdots + g_1 x + g_0
+  \;\in\; \GF{q}[x],
+\]
+sin raíces en $\GF{q}$, y un soporte ordenado
+$\alpha_0,\dots,\alpha_{n-1}$ de elementos distintos de $\GF{q}$
+---las raíces del polinomio $\prod_i (x-\alpha_i)$---. Con la clave
+privada $(g,\alpha_0,\dots,\alpha_{n-1})$ uno descifra exactamente
+igual que el receptor: cualquier atacante que la recupere rompe la
+tarea OW-CPA sin tocar el problema SD. La pregunta estructural es,
+por tanto: \emph{¿cuánto cuesta enumerar las claves privadas
+posibles?}
+
+Dos hechos de conteo elemental, que la guía y la rationale del
+equipo subrayan~\cite{cmsecurity,cmrationale}:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item Los polinomios $g$ candidatos (mónicos, de grado $t$ sobre
+        $\GF{q}$, sin raíces en $\GF{q}$) son del orden de $q^{t}/t$.
+        Para el conjunto clásico $m=12$, $t=64$: $q^{t}/t =
+        4096^{64}/64 = 2^{768-6} = 2^{762}$. Para los parámetros
+        originales de 1978, $2^{494{,}4}$.
+  \item Las tuplas ordenadas $(\alpha_0,\dots,\alpha_{n-1})$ de
+        elementos distintos de $\GF{q}$ son $q(q-1)\cdots(q-n+1)$:
+        para $\texttt{mceliece348864}$, unos $38\,500$ bits
+        ($\approx 2^{38\,501}$); para los parámetros originales
+        ($n=q$), $1024!\approx 2^{8771}$.
+\end{itemize}
+
+A primera vista ambos números son abrumadores, y ahí está el primer
+malentendido: \emph{los ataques estructurales no enumeran a lo
+bruto}. Dividen el trabajo. La figura~\ref{fig:est-rutas} muestra
+las dos rutas conocidas hacia la clave, y la caja negra en la que se
+apoyan: el algoritmo de división del soporte de Sendrier
+(2000)~\cite{sendrier2000}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    nd/.style={draw=mcgray,fill=white,rounded corners=3pt,align=flush center,
+      font=\scriptsize,inner sep=4pt,minimum height=0.95cm,text width=2.5cm},
+    pk/.style={nd,draw=mcblue,fill=mcsky!45,text width=2.2cm,font=\footnotesize},
+    ok/.style={nd,draw=mcgreen,fill=mcgreen2!50,text width=2.9cm},
+    sup/.style={nd,draw=mcorange,fill=mcorange2!50,text width=3.1cm},
+    gen/.style={nd,draw=mcteal,fill=mcteal2!55,text width=2.9cm},
+    arr/.style={-{Stealth[length=2.2mm]},thick,mcgray},
+    ann/.style={font=\tiny,color=mcgray,align=center}
+  ]
+  % fila estructural
+  \node[pk] (pk1) at (0,2.3) {clave pública\\ ($g$ y $\alpha$'s ocultos)};
+  \node[nd,draw=mcorange] (g1) at (3.5,2.3) {adivinar $g$:\\ $2^{762}$ opciones\\ (caso $m=12$, $t=64$)};
+  \node[sup] (ss) at (7.3,2.3) {support splitting\\ (caja negra: usa $g$ y el\\ conjunto $\{\alpha_i\}$)};
+  \node[ok] (priv) at (11.4,2.3) {$(\alpha_0,\dots,\alpha_{n-1})$ ordenados:\\ descifrar como el receptor};
+  \draw[arr] (pk1) -- (g1);
+  \draw[arr] (g1) -- (ss);
+  \draw[arr] (ss) -- (priv);
+  % puerta de abajo
+  \node[nd,draw=mcred,fill=mcred2!45] (a1) at (3.5,-1.3)
+    {adivinar $(\alpha_0,\dots,\alpha_{n-k})$:\\ $q(q-1)\cdots(q-n+k)$ opciones,\\ $\approx 2^{9116{,}8}$ para \texttt{348864}};
+  \draw[arr,mcred] (a1) -- (ss) ;
+  \draw[arr,mcred,dashed] (pk1.south) |- (a1.west);
+  % fila ISD
+  \node[pk] (pk2) at (0,-3.7) {clave pública\\ ($g$ y $\alpha$'s ocultos)};
+  \node[gen] (isd) at (3.5,-3.7) {decodificar (ISD,\\ capítulo~\ref{ch:isd}):\\ $2^{140{,}8}$};
+  \node[ok] (e2) at (7.3,-3.7) {recuperar $e$:\\ descifrar};
+  \draw[arr] (pk2) -- (isd);
+  \draw[arr] (isd) -- (e2);
+  \draw[arr,dashed,mcgray] (pk2.north) -- (pk1.south)
+    node[midway,right,ann,text width=1.6cm]{el atacante elige ruta};
+\end{tikzpicture}
+\caption{Las rutas conocidas hacia la clave privada, a fecha de 2022.
+Arriba, la ruta estructural: adivinar $g$ y dividir el soporte con el
+algoritmo de Sendrier~\cite{sendrier2000}; con $n=q$ basta adivinar
+$g$, y con $n<q$ la puerta exige además las posiciones
+$(\alpha_0,\dots,\alpha_{n-k})$ (ataque de Kirshanova--May, 2022, con
+dato parcial~\cite{kirshanova2022}). Abajo, la ruta genérica de
+decodificación, que no usa estructura alguna. Los números son los de
+las fuentes: $2^{762}$ y $2^{9116{,}8}$ para \texttt{mceliece348864},
+$2^{140{,}8}$ de la tabla~\ref{tab:isd-guia}~\cite{cmsecurity}.}
+\label{fig:est-rutas}
+\end{figure}
+
+\section{La división del soporte}\label{sec:est-support}
+
+El algoritmo de Sendrier merece presentación pausada, porque es la
+pieza que hace pensables los ataques estructurales. Su tesis:
+\emph{dados $g$ y el desordenado conjunto $\{\alpha_0,\dots,\alpha_{n-1}\}$
+---no las posiciones, solo el conjunto---, el polinomio de Goppa
+permite reconstruir el orden $\alpha_0,\dots,\alpha_{n-1}$ en tiempo
+rápido}. El nombre viene de ahí: el algoritmo «divide» el soporte en
+las partes que $g$ distingue, y de esas divisiones deduce qué
+columna del código corresponde a qué elemento del
+cuerpo~\cite{sendrier2000}. La guía lo enuncia así: recupera
+$(\alpha_0,\dots,\alpha_{n-1})$ «a partir de la clave pública, $g$
+y $\{\alpha_0,\dots,\alpha_{n-1}\}$, bajo supuestos
+menores»~\cite{cmsecurity}. Los detalles finos viven en el artículo
+original; para contar el ataque completo basta tratarlo como caja
+negra.
+
+La consecuencia para el McEliece original es inmediata. Su diseño
+tomaba $n=q$: el soporte es \emph{todo} el cuerpo $\GF{q}$, un
+conjunto público, y por tanto el ataque estructural se reduce a
+enumerar el polinomio $g$ ---$q^t/t\approx 2^{494{,}4}$ posibilidades
+para los parámetros de 1978--- y dejar que la división del soporte
+haga el resto. En 2000 esto no rompió a McEliece, pero convirtió lo
+que parecía un espacio de claves de $1024!\approx 2^{8771}$ (las
+tuplas ordenadas completas) en una enumeración de $q^{t}/t\approx
+2^{494{,}4}$ polinomios $g$ ---el orden del soporte lo aporta el
+propio algoritmo---, y dejó claro cuál era la pieza a defender.
+
+La defensa, ya lo habrá adivinado el lector, es $n<q$: si el cuerpo
+tiene $q$ elementos y solo se usan $n$, el conjunto
+$\{\alpha_0,\dots,\alpha_{n-1}\}$ \emph{deja de ser público}.
+Aparecen $\binom{q}{n}$ conjuntos posibles, y la caja negra ya no
+tiene una de sus entradas. La rationale del equipo lo dice
+explícitamente: mantener $n$ por debajo de $q$ es «una defensa extra
+contra la división del soporte»; para \texttt{mceliece6960119} hay
+$\binom{8192}{6960}\approx 2^{4997}$ conjuntos posibles ---«aunque
+podría haber maneras de fusionar el trabajo entre
+posibilidades»~\cite{cmrationale}. (Merece la pena notar el doble
+filo: contra los ataques de decodificación, $n<q$ no ayuda ni
+perjudica; el capítulo~\ref{ch:isd} cuantificó ese efecto en menos
+de un bit. La asimetría es real: el mismo truco que es neutro contra
+ISD es el que sostiene el muro contra lo estructural.)
+
+En 2022, Kirshanova y May añadieron una pieza más al
+rompecabezas~\cite{kirshanova2022}: dado un \emph{dato parcial} ---las
+posiciones $(\alpha_0,\dots,\alpha_{n-k})$ de la clave ordenada---,
+se recupera el resto de la clave privada con un algoritmo rápido.
+Combinado con una búsqueda a lo bruto sobre ese dato parcial, esto
+da la cota superior estándar para la recuperación de clave: hay
+$q(q-1)\cdots(q-n+k)$ tuplas posibles, «aproximadamente
+$2^{9116{,}797}$ posibilidades para
+$(q,n,k,t)=(4096,3488,2720,64)$», los parámetros de
+\texttt{mceliece348864}~\cite{cmsecurity}. La tabla~\ref{tab:est-espacios}
+resume todos los espacios de búsqueda en juego.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llll}
+\toprule
+ruta & espacio a enumerar & coste (ejemplo) & fuente\\
+\midrule
+adivinar $g$; soporte conocido ($n=q$) & $q^{t}/t$ &
+  $2^{762}$ ($q=4096$, $t=64$) & \cite{cmsecurity}\\
+adivinar $g$; con $n<q$ & $\times\,\binom{q}{n}$ &
+  $2^{4997}$ ($\binom{8192}{6960}$) & \cite{cmrationale}\\
+dato parcial $(\alpha_0,\dots,\alpha_{n-k})$ & $q\cdots(q-n+k)$ &
+  $2^{9116{,}8}$ (\texttt{348864}) & \cite{cmsecurity,kirshanova2022}\\
+parámetros originales (1978) & $q^{t}/t$ \ y \ $q\cdots(q-n+k)$ &
+  $2^{494{,}4}$ \ y \ $2^{4794{,}7}$ & \cite{cmrationale}\\
+\midrule
+\emph{referencia: decodificación genérica} & --- &
+  $2^{140{,}8}$ (\texttt{348864}) & \cite{cmsecurity}\\
+\bottomrule
+\end{tabular}
+\caption{Los espacios de búsqueda de los ataques estructurales, con
+los ejemplos que citan las fuentes. La última fila no es un ataque
+estructural: es el rival genérico del capítulo~\ref{ch:isd}, incluido
+para que la comparación de la figura~\ref{fig:est-abismo} tenga a
+mano sus dos extremos.}
+\label{tab:est-espacios}
+\end{table}
+
+\begin{historia}[Sendrier y la tradición de la equivalencia de códigos]
+Los ataques estructurales no nacieron contra McEliece: nacieron de
+una pregunta más vieja de la teoría de códigos, la
+\emph{equivalencia}: ¿cuándo dos matrices generadoras distintas
+describen el mismo código con las posiciones permutadas? Sendrier
+llevaba años construyendo herramientas para responderla cuando, en
+2000, publicó la división del soporte~\cite{sendrier2000}. Desde
+entonces la criptografía basada en códigos la adoptó como parte
+estándar del oficio; el capítulo de Overbeck--Sendrier del libro
+clásico de criptografía post-cuántica la presenta junto a los ataques
+de decodificación como la segunda gran familia~\cite{overbeck2009}.
+La lista de trabajos de criptoanálisis que la rationale del equipo
+recopila ---treinta publicaciones entre 1981 y 2022, de
+Canteaut--Sendrier (1998) a Carrier--Debris-Alazard--Meyer-Hilfiger--Tillich
+(2022)--- muestra las dos tradiciones entrelazadas durante cuatro
+décadas~\cite{cmrationale,canteautsendrier1998,carrier2022}.
+\end{historia}
+
+\begin{observacion}{El doble filo de $n<q$, en una línea}{est-nq}
+Para ISD, elegir $n<q$ cuesta a lo sumo fracciones de bit
+(observación~\ref{obs:isd-acortamiento}). Para lo estructural,
+elegir $n<q$ multiplica el trabajo de la división del soporte por el
+número de conjuntos posibles ($\approx 2^{4997}$ para
+\texttt{6960119}, según~\cite{cmrationale}). Un mismo parámetro,
+dos efectos de signo opuesto: por eso los conjuntos se eligen con el
+estimador delante, no a ojo.
+\end{observacion}
+
+\section{Distinguidores: saben que es Goppa, ¿y qué?}\label{sec:est-distinguidores}
+
+Hay una familia de resultados estructurales que no recupera la
+clave ni decodifica: \emph{distingue}. Un distinguidor es un
+algoritmo que, mirando la clave pública, decide si proviene de una
+Goppa binaria o de una matriz aleatoria con probabilidad de acierto
+apreciable, y con un coste que en los parámetros reales sería
+ridículo ($2^{40}$, $2^{60}$\dots). Como en el capítulo~\ref{ch:seguridad}
+adelantamos en forma de trampa, un distinguidor viola el supuesto
+«pk parece aleatoria», pero no implica por sí solo ni recuperar $e$
+ni recuperar la clave. La historia de estos ataques es la historia de
+sus \emph{márgenes}: todos funcionan en regímenes de parámetros que
+McEliece no usa, y todos mueren mucho antes de llegar a los
+conjuntos reales. La tabla~\ref{tab:est-margenes} los recoge.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{llll}
+\toprule
+ataque & criterio & funciona en & McEliece usa\\
+\midrule
+Faugère et al.\ 2013~\cite{faugere2013} & pocos errores &
+  $\le 8$ ($n=1024$);\ $\le 20$ ($n=8192$) & $50$;\ $96$--$128$\\
+Carrier et al.\ 2022~\cite{carrier2022} & tasa de código baja &
+  $<0{,}3$ & $0{,}7$--$0{,}8$\\
+Couvreur et al.\ 2017~\cite{couvreur2017} & grado pequeño &
+  $m\le 2$ & $m=12,13$\\
+\bottomrule
+\end{tabular}
+\caption{Los distinguidores conocidos y sus márgenes, según la
+rationale del equipo~\cite{cmrationale}. La segunda columna dice qué
+región del espacio de parámetros explota cada ataque; la tercera,
+hasta dónde llega; la cuarta, dónde viven los conjuntos de Classic
+McEliece. El ataque de 2013 es el llamado «distinguidor de alta
+tasa» de Faugère--Gauthier-Umaña--Otmani--Perret--Tillich; el de
+Couvreur--Otmani--Tillich ataca las variantes «wild».}
+\label{tab:est-margenes}
+\end{table}
+
+\begin{rigor}[Distinguir no es romper]
+La lógica, para que no queden cabos sueltos. (1)~El objetivo
+criptográfico del capítulo~\ref{ch:seguridad} es OW-CPA, y el
+lema~\ref{lem:seg-ow-sd} lo redujo a SD: recuperar $e$. (2)~Un
+distinguidor devuelve un bit ---«¿es Goppa?»--- y nada más; no
+produce ni $e$ ni $(g,\alpha_0,\dots)$. (3)~No existe reducción
+conocida del primero al segundo: que la clave pública sea
+reconocible como Goppa no da, hoy por hoy, ninguna vía directa para
+invertir SD más rápido que los ataques genéricos. (4)~El «caso
+peor lógico» está identificado desde el propio distinguidor de
+2013: que alguien encadene el distinguidor con un ataque de
+inversión. Los autores del distinguidor y el equipo de Classic
+McEliece han vigilado esa posibilidad durante una década ---y los
+márgenes de la tabla~\ref{tab:est-margenes} son precisamente la
+distancia que la cadena tendría que cubrir. (5)~Nada de esto es un
+teorema de imposibilidad: es un historial. El capítulo~\ref{ch:2026}
+contará cómo en 2025 un distinguidor directo ---no una cadena---
+cambió el tono de la conversación.
+\end{rigor}
+
+\begin{trampa}[«Si su familia cayó, la mía también»]
+Cuando una propuesta basada en otra familia de códigos se rompe
+---y ha ocurrido muchas veces, como recuerda la
+rationale~\cite{cmrationale}---, los autores de los ataques suelen
+probarlos contra Goppa binaria. La rationale recoge el resultado
+invariable: «estos estudios muestran consistentemente que el sistema
+de McEliece está mucho más allá de todos los ataques conocidos»
+(cada golpe contra Goppa queda en la situación de la
+tabla~\ref{tab:est-margenes}: funcionan en regiones que los
+parámetros evitan). La lección no es que Goppa sea invulnerable: es
+que cada familia tiene su anatomía, y el criptoanálisis se trasplanta
+entre familias con mucha menos facilidad de la que sugieren los
+titulares. El capítulo~\ref{ch:2026} mostrará la otra cara del mismo
+argumento: cuando el trasplante \emph{sí} prendió.
+\end{trampa}
+
+\section{El balance de 2022}\label{sec:est-balance}
+
+Con todo lo anterior, la foto a fecha de la guía de seguridad es
+nítida: el mejor ataque de recuperación de clave contra
+\texttt{mceliece348864} cuesta $2^{9116{,}8}$ (tabla~\ref{tab:est-espacios})
+y el mejor ataque genérico, $2^{140{,}8}$ (tabla~\ref{tab:isd-guia}).
+La figura~\ref{fig:est-abismo} pone las tres barras relevantes en una
+misma escala logarítmica: decodificar, adivinar $g$, adivinar los
+$\alpha$'s.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    bar/.style={draw=mcgray,thick,rounded corners=1.5pt},
+    lab/.style={font=\scriptsize,align=left},
+    labt/.style={font=\tiny,color=mcgray}
+  ]
+  \def\sc{0.001383}
+  % eje
+  \draw[mcgray,thick,-{Stealth[length=2.2mm]}] (0,-0.5) -- (13.2,-0.5);
+  \foreach \b in {2000,4000,6000,8000}
+    \draw[mcgray] (\sc*\b,-0.62) -- (\sc*\b,-0.38)
+      node[below,labt] {$\b$};
+  % barras
+  \fill[mcsky!70] (0,-0.05) rectangle (\sc*140.8,0.55);
+  \draw[bar,mcblue] (0,-0.05) rectangle (\sc*140.8,0.55);
+  \node[lab,anchor=west] at (0.30,0.25)
+    {decodificar (ISD): $2^{140{,}8}$};
+  \fill[mcorange2!80] (0,-1.35) rectangle (\sc*762,-0.75);
+  \draw[bar,mcorange] (0,-1.35) rectangle (\sc*762,-0.75);
+  \node[lab,anchor=west] at (1.15,-1.05)
+    {adivinar $g$ con el soporte conocido: $2^{762}$};
+  \fill[mcorange2!80] (0,-2.65) rectangle (\sc*9116.8,-2.05);
+  \draw[bar,mcorange] (0,-2.65) rectangle (\sc*9116.8,-2.05);
+  \node[lab,anchor=west] at (0.4,-2.35)
+    {adivinar $(\alpha_0,\dots,\alpha_{n-k})$: $2^{9116{,}8}$};
+  % llave entre barras
+  \draw[decorate,decoration={brace,amplitude=3pt},
+    mcgray] (\sc*140.8,0.75) -- (\sc*9116.8,0.75);
+  \node[lab,text=mcgray] at (6.4,1.05)
+    {el abismo: un factor $2^{8976}$};
+  % nota
+  \node[labt,text width=13cm,align=center] at (6.6,-3.3)
+    {cada barra mide $\log_2(\text{coste})$ en la misma escala
+     lineal: la primera ocupa aquí $\approx 0{,}2$ cm, y la
+     última, casi la figura entera};
+\end{tikzpicture}
+\caption{El balance de 2022 para \texttt{mceliece348864}, en escala
+de exponentes (bits). Decodificar cuesta $2^{140{,}8}$; recuperar la
+clave por la vía de $g$ cuesta $2^{762}$ (y esta vía requiere haber
+resuelto antes el conjunto, o $n=q$); recuperarla por la vía del
+dato parcial cuesta $2^{9116{,}8}$. Datos:
+tablas~\ref{tab:est-espacios} y~\ref{tab:isd-guia}.}
+\label{fig:est-abismo}
+\end{figure}
+
+La lectura del abismo es obligada en este punto del libro. Durante
+cuarenta y cinco años, todos los intentos de explotar la estructura
+de Goppa se estrellaron contra distancias como esa: la cita de la
+rationale es tajante ---«los ataques de recuperación de clave del
+estado del arte son enormemente más lentos que la decodificación por
+conjuntos de información»~\cite{cmrationale}--- y la conclusión
+estratégica del equipo fue doble. Primera: conservar los códigos de
+Goppa binarios, «la elección tradicional, conservadora y bien
+estudiada»~\cite{cmrationale}, pese a que existen alternativas con
+claves más pequeñas. Segunda: documentar cada margen, porque los
+márgenes \emph{son} la seguridad en esta familia de ataques: no
+existe un teorema que diga «Goppa es rígida»; existe la cuenta de
+todos los ataques que se han quedado cortos.
+
+Ese es el muro tal como se veía en 2022. El capítulo~\ref{ch:2026}
+cuenta cómo, entre 2025 y 2026, aparecieron las primeras grietas
+---primero un distinguidor directo, después ataques de recuperación
+de clave--- y cómo reaccionaron el equipo, ISO, BSI y NIST.
+
+\section{Ejercicios}
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=4pt]
+  \item \textbf{Aritmética del muro.} Verifique con una calculadora:
+        (a)~$4096^{64}/64 = 2^{762}$; (b)~$1024^{50}/50 \approx
+        2^{494{,}4}$; (c)~$\log_2\bigl(q(q-1)\cdots(q-769+1)\bigr)
+        \approx 9116{,}8$ para $q=4096$ (puede usar la identidad
+        $\log_2 P(q,r) = \sum_{j=0}^{r-1}\log_2(q-j)$, una hoja de
+        cálculo, o la aproximación de Stirling).
+  \item \textbf{Conjuntos y tuplas.} Estime $\log_2\binom{4096}{3488}$
+        con la fórmula de Stirling para entropías
+        ($\approx 2^{2476}$) y compárela con $2^{9116{,}8}$: ¿por qué
+        una va con $n$ y la otra con $n-k$? (pista: la segunda pide
+        posiciones \emph{concretas} del soporte ordenado, no solo el
+        conjunto).
+  \item \textbf{El abismo en potencias.} (a)~Calcule
+        $9116{,}8-140{,}8$ y exprese el cociente de costes como
+        potencia de $2$. (b)~Compare esa potencia con $2^{256}$
+        (el margen de AES-256) y comente en dos líneas por qué el
+        titular «recuperar claves de McEliece cuesta $2^{9116}$»
+        es, además de correcto en 2022, casi cómico como amenaza
+        práctica.
+  \item \textbf{Distinguir no es romper.} Use el
+        recuadro de rigor: escriba la cadena lógica que convertiría
+        un distinguidor en un ataque de inversión de SD, señale el
+        eslabón que falta y explique qué papel juegan los márgenes
+        de la tabla~\ref{tab:est-margenes}.
+  \item \textbf{El doble filo de $n<q$.} Con la
+        observación~\ref{obs:isd-acortamiento} (capítulo~\ref{ch:isd})
+        y la observación~\ref{obs:est-nq}: explique en un párrafo por
+        qué los conjuntos de Classic McEliece pueden tomar $n<q$ sin
+        pagar seguridad contra ISD y cobrar, en cambio, ventaja
+        contra la división del soporte.
+  \item \textbf{Tabla de supervivencia.} Ordene los tres
+        distinguidores de la tabla~\ref{tab:est-margenes} por
+        «holgura» (distancia relativa entre su límite y los
+        parámetros reales) y discuta cuál de los tres le parece el
+        candidato más peligroso a escalar. (No hay solución única:
+        se trata de razonar sobre los regímenes.)
+\end{enumerate}

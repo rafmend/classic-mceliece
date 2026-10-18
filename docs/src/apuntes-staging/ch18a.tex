@@ -1,0 +1,189 @@
+% ======================================================================
+%  CAPÍTULO 18 — REPASO Y SOLUCIONES (parte 1: repaso)
+% ======================================================================
+
+\chapter{Repaso y soluciones}\label{ch:soluciones}
+
+\begin{roadmap}
+El libro termina como empezó: con lápiz y papel. La
+sección~\ref{sec:sol-repaso} propone doce preguntas de repaso que
+recorren el argumento completo de las partes~I--IV: quien las
+responda de memoria puede considerar que entendió el esquema. La
+sección~\ref{sec:sol-soluciones} da las respuestas concisas. Y la
+sección~\ref{sec:sol-ejercicios} resuelve, capítulo a capítulo, los
+$94$ ejercicios del libro, con las cifras ya calculadas y
+verificadas. En los laboratorios, el programa del
+apéndice~\ref{app:codigo} reproduce todos los números.
+\end{roadmap}
+
+\section{Repaso: doce preguntas}\label{sec:sol-repaso}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=5pt]
+  \item Defina el problema SD en su versión de búsqueda y el juego
+        OW-CPA del cifrado de Niederreiter, y enuncie su equivalencia
+        (capítulo~\ref{ch:seguridad}).
+  \item ¿Por qué los conjuntos de Classic McEliece pueden tomar
+        $n<q$? Dé las dos caras: el acortamiento y la división del
+        soporte.
+  \item Escriba las fórmulas de tamaño del criptograma, la clave
+        pública y la clave secreta de un conjunto $(m,t,n,k)$, y
+        diga qué componente domina la clave secreta.
+  \item Enumere los cuatro pasos de $\textsf{Decode}$ y explique por
+        qué los dos chequeos finales (peso y síndrome) son
+        imprescindibles para el KEM.
+  \item ¿Con qué probabilidad tiene éxito $\textsf{MatGen}$ con
+        $(\mu,\nu)=(0,0)$? ¿Qué compra y qué cuesta la forma
+        semi-sistemática $(32,64)$?
+  \item Describa la tubería $\textsf{Encap}/\textsf{Decap}$ con
+        rechazo implícito y diga qué es exactamente $s$.
+  \item Enuncie los tres términos de la cota ROM del
+        teorema~\ref{thm:kem-rom} y evalúelos para
+        \texttt{mceliece348864} con $q_D=q_H=2^{64}$.
+  \item Distinga las tres familias de ataque que aparecen en el
+        libro (ISD, estructurales, distinguidores) con un método y
+        un capítulo para cada una.
+  \item Escriba la probabilidad de éxito de una iteración de
+        Prange, evalúela para $(n,k,t)=(3488,2720,64)$ y componga
+        el coste total. ¿De dónde sale el medio bit de diferencia
+        con la guía?
+  \item Explique «$o(1)$ no es $0$» y su consecuencia para comparar
+        Prange con May--Ozerov.
+  \item ¿Qué cuenta exactamente el «muro» $2^{9116{,}8}$ y qué
+        \emph{no} es? ¿A qué distancia quedó de él la familia de
+        2025--2026?
+  \item Resuma el año 2025--2026 en cuatro cifras y una moraleja
+        (capítulo~\ref{ch:2026}).
+\end{enumerate}
+
+\section{Soluciones del repaso}\label{sec:sol-soluciones}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=5pt]
+  \item \textbf{SD y OW-CPA.} SD (búsqueda): dadas $H\in\Ftwo^{mt
+        \times n}$, $C\in\Ftwo^{mt}$ y $t$, hallar $e$ de peso
+        $\le t$ con $He=C$; encontrar el criptograma que genera
+        una clave pública. OW-CPA: dados $(T,\,C=\textsf{Encode}(e,T))$
+        con $e$ uniforme de peso $t$, hallar $e$. La
+        equivalencia (lema del capítulo~\ref{ch:seguridad}): el
+        cifrado es una biyección lineal en $e$, así que invertirlo
+        es exactamente decodificar el síndrome; sin decodificador
+        no hay inversión y viceversa.
+
+  \item \textbf{$n<q$.} (a)~Acortamiento: un decodificador para
+        $(q,q,t)$ resuelve $(q,n,t)$ con éxito que decae a lo sumo
+        como $\binom{n}{t}/\binom{q}{t}$ ---en el modelo 1/2, unos
+        $0{,}8$ bits---: bajar $n$ no regala seguridad contra ISD
+        (capítulo~\ref{ch:isd}). (b)~División del soporte: los
+        ataques que adivinan los elementos $\alpha$ deben elegir
+        $n$ de $q$ columnas, y pagan $\binom{q}{n}$: tomar
+        $n<q$ los encarece (capítulo~\ref{ch:estructura}). El
+        diseño cobra en el segundo frente lo que no pierde en el
+        primero.
+
+  \item \textbf{Tamaños.} $ct=\lceil mt/8\rceil$ bytes;
+        $ek=mt\lceil k/8\rceil$ (la $T$ de
+        $(\mathrm{I}_{mt}|T)$, una fila por byte redondeado);
+        $sk=32+8+t\lceil m/8\rceil+\lceil(2m-1)2^{m-4}\rceil
+        +\lceil n/8\rceil$ (semilla, contador, $g$, orden de
+        $\alpha$ en red de Benes, $s$). En \texttt{8192128}:
+        $14120$ bytes, dominados por los $12800$ de $\alpha$;
+        la pública es toda $T$ (capítulo~\ref{ch:keygen}).
+
+  \item \textbf{Decode.} (1)~$v=(C,\mathbf{0})$; (2)~el único
+        $c\in\Gamma_2$ con $Hc=0$ y $d(v,c)\le t$ (Patterson con
+        $g$ y el orden de $\alpha$); si no existe, $\bot$;
+        (3)~$e=v+c$; (4)~aceptar si y solo si $\wt(e)=t$ y
+        $He=C$. Los chequeos caracterizan la imagen de
+        $\textsf{FixedWeight}$: sin ellos, entrarían errores de
+        peso menor y el «mensaje» aceptado dejaría de ser uniforme en
+        el conjunto de peso $t$ que exige la reducción.
+
+  \item \textbf{MatGen.} Con $(0,0)$ el éxito es
+        $\prod_{i=0}^{mt-1}(1-2^{i-mt})\approx0{,}289$: unos
+        $3{,}4$ intentos de media. Con $(32,64)$, el fallo por
+        intento cae bajo $2^{-30}$ ($\approx1$ intento), al
+        precio de $\le2$ bits de tensión en la reducción y de
+        cómputo en tiempo constante dentro de la ventana
+        (capítulos~\ref{ch:keygen} y~\ref{ch:parametros}).
+
+  \item \textbf{Encap/Decap.}
+        $\textsf{Encap}$: $e\leftarrow\textsf{FixedWeight}$,
+        $C=\textsf{Encode}(e,T)$, $K=H(1,e,C)$.
+        $\textsf{Decap}$: $e'\leftarrow\textsf{Decode}(C)$; si
+        $e'=\bot$ entonces $e'\leftarrow s$, $b\leftarrow0$, si no
+        $b\leftarrow1$; $K=H(b,e',C)$. $s$ es un vector uniforme
+        de $n$ bits guardado en la clave secreta: la clave de la
+        rama de rechazo. El rechazo implícito nunca devuelve
+        error: dos criptogramas (válido e inválido) producen
+        siempre $32$ bytes pseudorandom (capítulo~\ref{ch:kem}).
+
+  \item \textbf{Cota ROM.}
+        $\mathrm{Adv}\le\Pr[\text{OW-CPA}]+\dfrac{q_D}{|P|}
+        +\dfrac{2q_H}{|S|}$. Para \texttt{348864}:
+        $2^{64}/2^{456}=2^{-392}$ y
+        $2^{65}/2^{256}=2^{-191}$: el tercer término domina (la
+        clave de rechazo de $256$ bits es el recurso escaso) y
+        aun así es despreciable; el verdadero supuesto es la
+        dureza OW-CPA, la conjetura de SD.
+
+  \item \textbf{Tres familias.} (1)~Decodificación genérica: Prange,
+        Stern, May--Ozerov\dots (capítulo~\ref{ch:isd}): atacan el
+        problema SD con álgebra lineal y listas. (2)~Estructurales:
+        división del soporte, álgebra sobre el código, distinguidores
+        con inversión (Faug\`ere, Carrier, Kirshanova, el
+        \emph{holdout} de GIJS\dots) (capítulos~\ref{ch:estructura}
+        y~\ref{ch:2026}): buscan $g$ y el orden de $\alpha$, o
+        recuperan $e$ estructuralmente. (3)~Distinguidores
+        (capítulo~\ref{ch:estructura}): deciden si la clave es de
+        Goppa; no rompen por sí solos, pero erosionan supuestos y,
+        desde 2026, operan en el régimen real.
+
+  \item \textbf{Prange.} Una iteración elige $k$ columnas y espera
+        que las $t$ posiciones del error caigan fuera:
+        $\bigl((n-k)/n\bigr)^{t}=(768/3488)^{64}=2^{-139{,}73}$;
+        con coste por iteración $\approx k^3=2^{34{,}23}$, el
+        total es $2^{173{,}96}\approx2^{174{,}0}$. La guía cotiza
+        $173{,}4$: el medio bit restante son las constantes de la
+        eliminación (pivotes, invertibilidad) que el estimador
+        fino sí cuenta (capítulo~\ref{ch:isd}).
+
+  \item \textbf{$o(1)$ no es $0$.} Asintóticamente, Prange y las
+        mejoras comparten exponente $\bigl(1/(1-R)\bigr)^{t}$:
+        difieren solo en el $o(1)$. En concreto, ese $o(1)$ no
+        es pequeño: para $348864$, Prange cuesta $2^{173{,}4}$ y
+        May--Ozerov $2^{140{,}8}$ ($32{,}6$ bits, un factor
+        $5\times10^{9}$). Las dos afirmaciones son ciertas a la vez:
+        misma pendiente asintótica, constantes muy distintas; de
+        ahí que las tablas se construyan con estimadores concretos
+        (capítulo~\ref{ch:isd}).
+
+  \item \textbf{El muro.} Es $\log_2$ del número de datos
+        parciales $q(q-1)\cdots(q-769+1)\approx2^{9116{,}8}$ que
+        la familia de ataques de 2022 necesitaría inspeccionar
+        para \texttt{348864}: un muro \emph{de su modelo}, no de
+        la criptografía. La familia de 2025--2026 (el
+        \emph{holdout} y sus derivados) no lo escala: lo evita,
+        cambiando el objeto de la búsqueda, y sus estimaciones
+        bajan a $2^{94}$--$2^{150}$ según la contabilidad
+        (capítulos~\ref{ch:estructura} y~\ref{ch:2026}).
+
+  \item \textbf{Cuatro cifras y una moraleja.} (i)~$2^{9116{,}8}\to
+        2^{94{,}3}$: la caída del modelo estructural de 2022;
+        (ii)~$2^{120}$--$2^{124}$: el coste cotizado de los
+        distinguidores de 2026 en el régimen real; (iii)~$2^{99}$
+        --$2^{102}$ frente a $2^{140}$--$2^{148}$: las dos
+        contabilidades que no acuerdan; (iv)~$2^{256}$: el suelo
+        trivial (buscar la semilla). Moraleja: a octubre de 2026
+        nadie ha roto Classic McEliece ---ni un ataque práctico,
+        ni una clave real recuperada--- y nadie puede ya decir
+        «inmune»: hay conjeturas con supuestos, contabilidades en
+        disputa y vigías institucionales (capítulo~\ref{ch:2026}).
+\end{enumerate}
+
+\section{Soluciones de los ejercicios de los capítulos 1--16}
+\label{sec:sol-ejercicios}
+
+Las páginas que siguen resuelven, capítulo a capítulo, los $94$
+ejercicios del libro. Las cifras están calculadas con la aritmética
+exacta de los apéndices (y de \texttt{toy.py} cuando el ejercicio es
+de laboratorio); los argumentos completos están en el texto del
+capítulo correspondiente.

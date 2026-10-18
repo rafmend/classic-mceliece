@@ -1,0 +1,499 @@
+% ======================================================================
+%  CAPÍTULO 18 — SOLUCIONES (parte 3: capítulos 9-16)
+% ======================================================================
+
+\subsection*{Capítulo 9 --- La generación de claves
+(capítulo~\ref{ch:keygen})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item Todo el proceso, incluidos los reintentos, es una función
+        determinista de la semilla $\delta$: al fallar
+        $\textsf{FieldOrdering}$, se toma $\delta'\leftarrow
+        \textnormal{(últimos $256$ bits de }E)$ y se repite sin pedir
+        azar nuevo. Las pruebas de vectores fijan $\delta$ y el
+        resultado esperado: cada implementación consume el mismo flujo
+        $E$ y reproduce los mismos reintentos, comparables byte a
+        byte.
+  \item Con $(7,1,9,3)$: al ordenar los pares $(a_i,i)$ queda
+        $1<3<7<9$, es decir $\pi=(1,3,0,2)$; leyendo los bits de
+        $\pi(i)$ como $\alpha_i=\sum_{j=0}^{m-1}\pi(i)_jz^{m-1-j}$
+        resulta $(\alpha_0,\dots,\alpha_3)=(z,\,z+1,\,0,\,1)$. Con
+        $(0,1,2,3)$: $\pi$ es la identidad
+        y $(\alpha_0,\dots,\alpha_3)=(0,\,z,\,1,\,z+1)$. Con
+        $(0,0,0,0)$ los enteros no son distintos:
+        $\textsf{FieldOrdering}$ devuelve $\bot$ y
+        $\textsf{MatGen}$ reintenta con $\delta\leftarrow\delta'$
+        (determinista).
+  \item $\beta$ recorre uniformemente $\GF{q^t}$ (los bloques de
+        $\sigma_1=16$ bits por coeficiente; solo se usan los primeros
+        $m$ de cada bloque). El polinomio mínimo de $\beta$ sobre
+        $\GF q$ es mónico, irreducible, y de grado $t$ exactamente
+        cuando $\beta$ no cae en un subcuerpo propio
+        $\GF{q^s}$, $s\mid t$, $s<t$ (si cae, el grado es $s$ y
+        $\textsf{Irreducible}$ devuelve $\bot$). Cada mónico
+        irreducible de grado $t$ divide a $x^{q^t}-x$ y tiene
+        exactamente $t$ raíces, todas simples, en $\GF{q^t}$; sus
+        $t$ raíces son exactamente las $\beta$ cuyo mínimo es él. Así
+        cada $g$ admite $t$ de las $q^t$ elecciones: $\beta$
+        uniforme $\Rightarrow$ $g$ uniforme (la masa rechazada es
+        $\approx q^{t-1}/q^t=1/q$).
+  \item La probabilidad de que las primeras $mt$ columnas de una
+        matriz binaria aleatoria $mt\times n$ sean independientes es
+        $\prod_{i=0}^{mt-1}(1-2^{i-mt})
+        =\prod_{j=1}^{mt}(1-2^{-j})\approx0{,}289$:
+        $3{,}46$ intentos de media, y $P(\ge3)\approx(1-0{,}289)^2
+        \approx0{,}5055$. Con $(\mu,\nu)=(32,64)$ el fallo por
+        intento cae bajo $2^{-30}$: un solo intento en la práctica,
+        a cambio de $\le2$ bits de tensión en la reducción y una
+        ventana de intercambios de tamaño fijo (tiempo constante).
+  \item $pk=mt\lceil k/8\rceil=1664\cdot816=\num{1357824}$~B;
+        $sk=32+8+t\lceil m/8\rceil+\lceil(2m-1)2^{m-4}\rceil
+        +\lceil n/8\rceil=40+256+12\,800+1024=\num{14120}$~B.
+        En la clave secreta domina $\alpha$ (los $12\,800$ bytes de
+        la red de Benes, el $91\%$); en la pública, la matriz $T$
+        entera.
+  \item El código $\ker(\mathrm{I}_{mt}|T)$ es público: dimensión
+        $k=2720$ y $2^{2720}$ codewords en \texttt{348864}
+        (cualquiera con la clave pública comprueba membresías). Quien
+        descubra $g$ y el orden $\alpha$ obtiene la descripción de
+        Goppa del código público: un decodificador eficiente, es
+        decir, una clave equivalente: descifrar todo
+        (observación~\ref{obs:code-public} y
+        proposición~\ref{prop:nied-reduccion}: atacar el esquema es
+        decodificar el código público; el secreto es su
+        descripción).
+\end{enumerate}
+
+\subsection*{Capítulo 10 --- Cifrado y descifrado
+(capítulo~\ref{ch:encapdecap})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item $v=(C,\mathbf{0})$; como $C=\hat{\Hmat}e$, para $c=v+e$
+        vale $\hat{\Hmat}c=\hat{\Hmat}v+\hat{\Hmat}e=C+C=0$: es un
+        codeword, y $d(c,v)=\wt(e)=2=t$. Con $C'=\hat{\Hmat}e'$ y
+        $\wt(e')=1$: el paso~2 de $\textsf{Decode}$ encuentra el
+        único codeword $c'$ a distancia $\le2$ (que es $v' + e'$);
+        el paso~3 devuelve $e''=e'$ (peso $1$); el paso~4
+        \emph{rechaza} ($\wt(e')\ne t$) y $\textsf{Decap}$ toma la
+        rama de rechazo.
+  \item (a)~Los trozos de $16$ bits bastan para nombrar cualquier
+        posición porque todo índice es $<n\le q=2^m\le2^{16}$ (en
+        los conjuntos reales $m\le13$; el juguete usa $m=4$);
+        (b)~cada
+        elección usa un trozo fresco: las elecciones son
+        independientes; (c)~descartar los trozos fuera de rango y
+        repetir no sesga: condicionado a ser aceptado, cada residuo
+        es equiprobable. Productos: juguete:
+        $1-1/16=0{,}9375$; \texttt{348864}:
+        $e^{-t(t-1)/(2n)}=e^{-64\cdot63/6976}\approx0{,}561$.
+  \item Si $c_1\ne c_2$ estuvieran ambos a distancia $\le t$ de
+        $v$, entonces $\wt(c_1+c_2)\le2t<2t+1\le d$: la diferencia
+        sería un codeword no nulo de peso bajo la distancia mínima.
+        Imposible: el candidato es único.
+  \item Con $C'=\hat{\Hmat}e'$, $\wt(e')=1$: el paso~2 devuelve
+        $e'$ (la corrección funciona: $1\le t$); el paso~4 lo
+        rechaza por el chequeo de peso. Sin ese chequeo,
+        $\textsf{Decap}$ aceptaría todo síndrome con preimagen de
+        peso $\le t$, y los «mensajes» aceptados serían uniformes en
+        $\{$peso $\le t\}$ en vez de en $\{$peso $=t\}$: se
+        romperían la distribución y la rigidez que las pruebas del
+        capítulo~\ref{ch:kem} usan (la aceptación debe caracterizar
+        exactamente los criptogramas de $\textsf{FixedWeight}$).
+  \item \textsf{Encode}: $mt\cdot k=1664\cdot6528=\num{10862592}$
+        bits $\approx2^{23{,}4}$; síndrome de \textsf{Decode}:
+        $tn=128\cdot8192=\num{1048576}$ $\approx2^{20}$ operaciones
+        de cuerpo. \textsf{Encode} toca unos $10$ veces más bits,
+        pero son XORs sobre datos públicos (vectorizables, sin
+        secretos); las de \textsf{Decode} son multiplicaciones en
+        $\GF{2^{13}}$, más Patterson ($t^2$ operaciones) y la
+        verificación: en coste efectivo domina \textsf{Decode}. Y
+        esa asimetría es justo la que quiere un KEM: el lado sin
+        clave (cifrar) por el camino barato y paralelo, y el lado
+        con la clave (descifrar) pagando el álgebra fuerte.
+  \item Para \texttt{6960119}: $H(b,v,C)$ recibe $1+\lceil
+        n/8\rceil+\lceil mt/8\rceil=1+870+194=1065$ bytes. Piezas:
+        la etiqueta ($0/1/2$) separa dominios (rechazo, éxito,
+        confirmación \texttt{pc}); $v=e$ fija el error; $C$ ata la
+        clave a la codificación exacta del criptograma (el escenario
+        del capítulo~\ref{ch:kem}). No se usa la lista de posiciones
+        del soporte porque el vector ya es una codificación de
+        longitud fija y canónica ($\lceil n/8\rceil$ bytes): una
+        lista exigiría convenios de orden, tendría longitud variable
+        y no aportaría nada.
+\end{enumerate}
+
+\subsection*{Capítulo 11 --- Laboratorio 2
+(capítulo~\ref{ch:labkem})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item Ejecutando el programa del apéndice~\ref{app:codigo}:
+        $\textsf{SHAKE256}(\hx{01}\,\|\,\hx{00\,24}\,\|\,\hx{98})$
+        da exactamente la $K$ de la
+        figura~\ref{fig:labkem-pipeline}
+        (\texttt{597f\ldots6278}), y $s=\hx{CBAE}$ se serializa
+        como los bytes $\hx{AE}\,\hx{CB}$ (little-endian por grupos
+        de $8$).
+  \item $e=9216=2^{10}+2^{13}$: las posiciones $10$ y $13$; cada
+        byte empaqueta $8$ posiciones con la posición $j$ en el bit
+        $j\bmod8$ del byte $j/8$: el primer byte
+        (posiciones $0$--$7$) es $\hx{00}$ y el segundo
+        (posiciones $8$--$15$) es $2^2+2^5=\hx{24}$: los bytes
+        $\hx{00}\,\hx{24}$. La convención «posición $0$ a la
+        izquierda» describe cómo se \emph{imprimen} los vectores;
+        la serialización empaqueta en little-endian. Igual para
+        $s$: $\hx{CBAE}$ escribe $\hx{AE}\,\hx{CB}$.
+  \item Si $c=v+e$ es un codeword y $S_c=\sum_jc_j\sigma_j\equiv0
+        \pmod g$, entonces
+        $S_v=\sum_jv_j\sigma_j\equiv S_c+S_e\equiv S_e\pmod g$
+        (en $\Ftwo$, $v_j+e_j=c_j$). Para $\tilde C$ el vector
+        $\tilde v+e$ ya \emph{no} es un codeword: su síndrome es la
+        columna del bit volteado ($\ne0$), la cancelación falla y el
+        síndrome cambia (en el juguete, $S=\hx4+\hx9x$ pasa a
+        $\hx b+\hx6x$).
+  \item Si $\textsf{Decap}$ dijera «error», el atacante voltearía
+        bits en $C$ y aprendería de la respuesta si $\tilde C$
+        decodifica: un oráculo de validez sobre los $256$ bytes
+        (los $119$ inalcanzables marcan los que siempre fallan; cada
+        consulta revelaría clases). En el KEM real no hay señal: la
+        rama de rechazo devuelve $H(0,s,\tilde C)$, indistinguible
+        de una $K$ válida; los $119$ síndromes inalcanzables se
+        tratan como cualquier otro fracaso.
+  \item $1+16+120=137$ síndromes alcanzables con peso $\le2$; los de
+        peso $3$ ya no están garantizados como únicos porque la
+        diferencia de dos palabras de peso $3$ puede pesar hasta
+        $6>d=5$ (solo los pesos con sumas $<d$ son únicos).
+        $137/256\approx53{,}5\%$ es la fracción de bytes alcanzables
+        por algún error de peso $\le2$; un byte manipulado al azar
+        falla tras el chequeo de peso con probabilidad
+        $(256-120)/256=136/256\approx53{,}1\%$: casi la misma cifra
+        (los $17$ síndromes de peso $0/1$, rechazados por el
+        chequeo, reparten la diferencia).
+  \item Clave pública: $\num{261120}/8=\num{32640}$ veces la del
+        juguete; criptograma: $96/1=96$ veces. Mecanismos omitidos:
+        $\sigma_1=16$ (bits sobrantes por coeficiente en
+        $\textsf{Irreducible}$), $\sigma_2=32$ (bits por elemento en
+        $\textsf{FieldOrdering}$), la forma semi-sistemática
+        $(\mu,\nu)$ y la red de Benes (compresión del orden
+        $\alpha$): los cuatro, en el capítulo~\ref{ch:keygen} (y el
+        tercero también en el~\ref{ch:parametros}).
+\end{enumerate}
+
+\subsection*{Capítulo 12 --- Los conjuntos y las variantes
+(capítulo~\ref{ch:parametros})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item Con $ct=\lceil mt/8\rceil$ y $ek=mt\lceil k/8\rceil$:
+        \texttt{348864}: $96$ y $768\cdot340=\num{261120}$;
+        \texttt{460896}: $156$ y $1248\cdot420=\num{524160}$;
+        \texttt{6688128}: $208$ y $1664\cdot628=\num{1044992}$;
+        \texttt{6960119}: $194$ y $1547\cdot677=\num{1047319}$;
+        \texttt{8192128}: $208$ y $1664\cdot816=\num{1357824}$.
+        En todos menos \texttt{6960119}, $k$ es múltiplo de $8$ y
+        $mt\lceil k/8\rceil=\lceil kmt/8\rceil$. En
+        \texttt{6960119}, $k=5413$: $\lceil kmt/8\rceil
+        =\lceil\num{8373911}/8\rceil=\num{1046739}$, frente a
+        $\num{1047319}$: la fila se redondea a byte y se pierden
+        $580$~B (el relleno de la última fila, $3$ bits por fila).
+  \item Con $H(2,e)$: $1+\lceil n/8\rceil$ bytes;
+        $H(1,e,C)$ y $H(0,s,C)$: $1+\lceil n/8\rceil+\lceil mt/8\rceil
+        +32$ en las variantes \texttt{pc} (el $32$ es la
+        confirmación). Para \texttt{460896pc}: $577$ y $765$~B; la
+        serie: $437/577/837/871/1025$ (para $H(2,e)$) y, en
+        \texttt{pc}, $565/765/997/1097/1265$ (para los otros dos).
+  \item Mitades de Stern: $75{,}7$, $96{,}7$, $134{,}0$,
+        $134{,}2$, $151{,}6$. Superan $2^{128}$ los tres conjuntos
+        $\texttt{6*}$: exactamente el borrador ISO de 2023. ISO
+        estandarizó \emph{además} \texttt{460896}, sabiendo que no
+        alcanza el listón ingenuo, porque la raíz cuadrada es
+        optimista para el atacante (Grover limitada por latencia):
+        el borrador lo dejó fuera y la versión final lo incluyó con
+        esa salvedad (la historia del capítulo~\ref{ch:parametros}).
+  \item $p\approx0{,}289$: $3{,}46$ intentos de media y
+        $P(>2)=(1-p)^2\approx0{,}5055$. Con $(\mu,\nu)=(32,64)$ el
+        fallo es $<2^{-30}$: $\approx1$ intento. La variante
+        \texttt{f} se ahorra $\approx3{,}5$ generaciones por clave
+        (y elimina la cola y la varianza).
+  \item Dos cadenas de $194$ bytes que difieran solo en los $5$
+        bits de relleno representan el mismo elemento de
+        $\Ftwo^{1547}$. En modo Simply el relleno se ignora: ambas
+        producen la \emph{misma} $K$ (un solo valor distinto). En
+        modo Narrowly, la cadena con relleno no nulo se rechaza:
+        una produce la $K$ legítima y la otra la clave de la rama de
+        rechazo. Debe fijarlo el protocolo porque una implementación
+        Simply y una Narrowly, mezcladas, discreparían en qué clave
+        corresponde a los mismos bytes: es la maleabilidad benigna
+        de la figura~\ref{fig:param-narrowly}.
+  \item Mensajería: \texttt{mceliece6960119} (el criptograma más
+        pequeño entre los \texttt{6*}: $194$~B; \texttt{pc} si se
+        quieren las defensas de fallo, $+32$~B): su clave pública de
+        $\approx1$~MB se cachea una vez y se amortiza entre millones
+        de mensajes. IoT: \texttt{mceliece460896f} (o
+        \texttt{6960119f} si se exige largo plazo): la variante
+        \texttt{f} porque la generación con reintentos es el punto
+        débil de un dispositivo lento, y el tamaño de la clave
+        pública allí importa menos que poder generarla de una vez.
+\end{enumerate}
+
+\subsection*{Capítulo 13 --- ¿Qué significa romper McEliece?
+(capítulo~\ref{ch:seguridad})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item (a)~Con una clave equivalente ($g$ y el orden $\alpha$) se
+        decodifica el código público: todo criptograma se abre, y
+        con él todo mensaje. (b)~Un rompemensajes «de juego» triunfa
+        sobre la \emph{distribución} del reto (por ejemplo con
+        conocimiento del reparto uniforme de errores) y no tiene por
+        qué resolver el problema de decodificación sobre síndromes
+        arbitrarios: no hay reducción conocida de juego a
+        decodificador general, y hay instancias estructuradas
+        débiles. (c)~Un distinguidor solo decide «¿Goppa o
+        aleatoria?»: no descifra; su papel es erosionar el supuesto
+        de que la clave pública es pseudorandom (el modelo que usan
+        las reducciones) y, a veces, ser la primera etapa de la
+        recuperación estructural; la reducción
+        distinguidor$\to$rotura es justamente la que no se conoce.
+  \item Las $137$ palabras de peso $\le2$ y el síndrome
+        $(\hx2,\hx b)$: el único candidato es $e_5+e_9$, porque
+        $\tilde{\Hmat}e_5+\tilde{\Hmat}e_9
+        =(\hx8,\hx e)+(\hx a,\hx5)=(\hx2,\hx b)$ (la unicidad estaba
+        garantizada por $d=5$: dos candidatos diferirían en un
+        codeword de peso $\le4<d$). Enumerar las palabras de peso
+        $64$ de \texttt{348864} cuesta $\approx2^{456}$; Prange se
+        cotiza en $2^{173{,}4}$: la diferencia ($\approx283$ bits)
+        vive en el algoritmo: la estructura lineal convierte el
+        «gran catálogo» en una probabilidad por iteración con
+        iteraciones baratas (el acortamiento del
+        capítulo~\ref{ch:isd}).
+  \item La conjetura, con cuantificadores: \emph{para todo}
+        algoritmo $A$ de tiempo subexponencial, \emph{para} la
+        instancia $(H,\,C=He)$ generada por la distribución del
+        esquema ($e$ uniforme de peso $t$), \emph{con éxito}
+        $=\Pr[A(H,C)=e]$ despreciable (con los mejores ataques
+        conocidos $\ge2^{140}$--$2^{150}$ en los modelos serios).
+        No equivalen: (a)~«NP-duro» habla del peor caso,
+        asintótico y de instancias arbitrarias: ni media, ni
+        distribución, ni parámetros; (b)~«no existe algoritmo
+        polinómico» ni fija la distribución ni cuantifica el éxito
+        (y no implica la dureza concreta de las instancias del
+        esquema); (c)~«el mejor ataque cuesta $2^{140{,}8}$» es una
+        cota \emph{superior} empírica: evidencia, no teorema, y
+        puede mejorar (2025--2026 lo mostró). En la práctica, el
+        que sostiene las decisiones es (c): las categorías y los
+        márgenes se calculan con el mejor ataque conocido; la
+        conjetura es el marco de la promesa.
+  \item $2^{140{,}8}$ son operaciones \emph{vectoriales} en el
+        modelo de memoria libre, donde una operación de vector
+        grande cuenta como una: no es directamente comparable con
+        las $2^{143}$ operaciones de bits de buscar una clave
+        AES-128; con el cargo realista de la memoria ($2^{86{,}6}$),
+        el mismo ataque sube a $2^{158{,}6}$: factor
+        $2^{158{,}6-140{,}8}=2^{17{,}8}\approx228\,210$. La
+        categoría~$1$ se certifica con el modelo que carga la
+        memoria ($158{,}6\ge143$): de ahí que no haya
+        contradicción.
+  \item Mitad en el exponente: $151{,}4/2=75{,}7$, muy por debajo
+        del listón $2^{128}$: \texttt{348864} no pasa el test
+        cuántico ingenuo. ISO estandarizó igualmente
+        \texttt{460896} ($96{,}7$, también por debajo) porque la
+        raíz cuadrada sobreestima al atacante: Grover está limitada
+        por la latencia del bucle interno, y el coste cuántico real
+        es mayor; con esa salvedad documentada, ISO prefirió
+        incluir el conjunto de claves pequeñas antes que dejar el
+        perfil sin cobertura.
+  \item (a)~Distinguidor (familia estructural, capítulos
+        \ref{ch:seguridad} y~\ref{ch:estructura}): rompe supuestos
+        de indistinguibilidad; no descifra. (b)~Mejora de ISD
+        (capítulo~\ref{ch:isd}): mueve la frontera de la
+        decodificación genérica; sola no rompe el esquema: cambia
+        la estimación. (c)~Canal lateral (capítulos
+        \ref{ch:kem}--\ref{ch:parametros} y~\ref{ch:2026}): rompe
+        un despliegue real (recupera la clave de una instalación
+        concreta midiendo tiempos), no el esquema abstracto.
+\end{enumerate}
+
+\subsection*{Capítulo 14 --- Decodificación por conjuntos de
+información (capítulo~\ref{ch:isd})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item (a)~$64\log_2(768/3488)=-139{,}73$;
+        (b)~$k^3=2720^3$: $3\log_2 2720=34{,}23$; total
+        $173{,}96$; (c)~la guía cotiza $173{,}4$: el medio bit son
+        las constantes finas del estimador (trabajo de la
+        eliminación, pivotaje, normalización del éxito) que
+        nuestro producto grueso sobrecuenta. Diferencia de
+        constantes, no de modelo.
+  \item Primer salto: $22{,}0$ bits $=2^{22}\approx4{,}19$ millones
+        $\approx4$ factores de $2^{20}$; segundo salto: $10{,}6$
+        bits $\approx1552$, medio factor de $2^{20}$. El primero es
+        el grande: el cruce de listas de Stern aporta
+        $\approx4\cdot2^{20}$ sobre Prange; la búsqueda de vecinos
+        de May--Ozerov añade «solo» $1{,}5\cdot2^{10}$.
+  \item Porque ambos son $\bigl(1/(1-R)\bigr)^{t}$ por
+        $2^{o(t)}$: con $R\approx0{,}78$, la base es
+        $1/(1-R)\approx4{,}55$ ($2^{2{,}18t}$; para $t=64$,
+        $2^{139{,}8}$). Prange arrastra un coste polinómico
+        ($k^3=2^{34{,}2}$): de $173{,}96$; May--Ozerov mete el
+        trabajo en las listas y los vecinos y se queda cerca del
+        término desnudo ($140{,}8$). El «$5^t$» es taquigrafía del
+        término dominante ($5\approx1/(1-R)$ redondeado): mismo
+        exponente, $o(1)$ distinto, y a $t=64$ ese $o(1)$ vale
+        $33$ bits.
+  \item (a)~Memoria gratis vs realista para \texttt{6960119}:
+        $279{,}2-245{,}7=33{,}5$ bits; (b)~$245{,}7<272$ (el
+        ataque con memoria gratis sale «más barato» que agotar
+        AES-256), pero $279{,}2>272$ (con el cargo de la memoria
+        ya no): la categoría del equipo es la $5$ porque certifica
+        con el presupuesto realista.
+  \item (8192,96) se transporta a (4608,96) por acortamiento: un
+        decodificador del código grande, restringido a las primeras
+        $4608$ coordenadas, decodifica el pequeño; el éxito se
+        conserva salvo el factor $\binom{4608}{96}/\binom{8192}{96}
+        \approx2^{-0{,}8}$, que es la pérdida de apretamiento del
+        transporte (ese $0{,}8$ es el exponente que separa ambas
+        cifras en el modelo 1/2). La dirección inversa no se
+        conoce: romper el pequeño no rompe automáticamente el
+        grande.
+  \item La mitad del exponente es una cota optimista porque
+        supone que cada iteración de Grover cuesta lo mismo que su
+        versión clásica y que el paralelismo no tiene penalización:
+        en la práctica el bucle interno (accesos a memoria, la
+        búsqueda en listas) domina y la ventaja cuántica real es
+        menor que la cuadrática. Los $256$ bits de $\delta$ fijan
+        el suelo complementario: la búsqueda cuántica de la semilla
+        cuesta $2^{128}$ (Grover sobre $256$ bits, con una
+        generación por comprobación), de modo que la seguridad
+        cuántica de un conjunto es $\min($mitad-ISD$,2^{128})$: por
+        eso el listón de ISO es exactamente $2^{128}$ y por eso los
+        conjuntos por debajo ($75{,}7$, $96{,}7$) son el punto
+        débil, aunque el modelo de la mitad sea optimista.
+\end{enumerate}
+
+\subsection*{Capítulo 15 --- Ataques estructurales: recuperar la
+clave privada (capítulo~\ref{ch:estructura})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item (a)~$4096^{64}/64=2^{768-6}=2^{762}$;
+        (b)~$1024^{50}/50\approx2^{500-5{,}6}=2^{494{,}4}$;
+        (c)~$\log_2P(4096,769)=\sum_{j=0}^{768}\log_2(4096-j)
+        \approx9116{,}8$.
+  \item $\binom{4096}{3488}$ cuenta \emph{conjuntos} de $n$
+        posiciones: $\approx2^{2476}$ (entropía de «qué elementos
+        forman el soporte»); $P(4096,769)$ cuenta \emph{tuplas
+        ordenadas} de $769$ posiciones concretas: el dato parcial
+        que el modelo de 2022 necesitaba reconstruir. La diferencia
+        ($\approx6640$ bits) es el precio del orden y de las
+        posiciones concretas: una va con el tamaño del soporte
+        ($n$) y la otra con los elementos libres ($n-k+1$).
+  \item (a)~$9116{,}8-140{,}8=8976$ bits; el cociente de costes es
+        $2^{8976}$ (¡$2^{8720}$ veces el margen entero de
+        AES-256!). (b)~Comparada con $2^{256}$, la cifra de 2022 es
+        inalcanzable por cualquier medio físico imaginable: el
+        titular era «correcto» dentro de un modelo de datos
+        parciales que estaba a punto de agotarse, y como amenaza
+        práctica era casi cómico (nadie ejecutaría jamás tal
+        cómputo).
+  \item La cadena sería: distinguidor con ventaja $1-o(1)$
+        $\to$ estadístico que expone estructura en las claves
+        reales $\to$ (eslabón que falta) inversión eficiente en
+        recuperación de clave $\to$ descifrado. Los márgenes de
+        la tabla~\ref{tab:est-margenes} miden la distancia del régimen de
+        cada método a los parámetros reales: Faugère ($t\le20$
+        frente a $64$--$128$) tiene holgura enorme; Carrier
+        (tasa $<0{,}3$ frente a $0{,}7$) moderada; el
+        \emph{holdout}/anulación de orden superior ya alcanza el
+        $t$ real: es el candidato natural a escalar, y el eslabón
+        que falta es la barrera que hoy separa el estadístico de
+        la clave.
+  \item $n<q$ es doblemente bueno: contra ISD no se paga nada
+        (el acortamiento transporta la dureza con $0{,}8$ bits de
+        pérdida: observación~\ref{obs:isd-acortamiento}), y contra
+        la división del soporte el atacante debe adivinar qué $n$
+        de las $q$ columnas forman $L$ y en qué orden: paga
+        $\binom{q}{n}$ (y tuplas ordenadas: $2^{9116{,}8}$); con
+        $n=q$ ese frente se desvanece
+        (observación~\ref{obs:est-nq}). El diseño cobra en un
+        frente lo que no pierde en el otro.
+  \item Holguras (menor = más peligroso): (1)~anulación de orden
+        superior / \emph{holdout} (su régimen alcanza el $t$ real:
+        la frontera está pegada a los parámetros, aunque sus
+        costes aún no escalen); (2)~Carrier (necesita tasa baja,
+        $<0{,}3$, y los conjuntos reales van a $0{,}7$--$0{,}8$:
+        margen moderado en el otro lado de la frontera);
+        (3)~Faugère ($t\le20$ frente a $\ge64$: holgura enorme).
+        El más peligroso a escalar es el primero: es el único
+        cuyo \emph{régimen} ya contiene a los conjuntos reales.
+        (Ejercicio de razonamiento: la respuesta admite matices,
+        pero no intercambiar los tres regímenes.)
+\end{enumerate}
+
+\subsection*{Capítulo 16 --- El terremoto: 2025--2026
+(capítulo~\ref{ch:2026})}
+
+\begin{enumerate}[leftmargin=1.9em,itemsep=4pt]
+  \item (a)~$9116{,}8-94{,}3=9022{,}5$ bits de diferencia. No es el
+        «mismo ataque mejorado»: la familia de 2022 (datos
+        parciales y reconstrucción del soporte) estaba agotada
+        contra su muro; el \emph{holdout} (GIJS/Weis) es una
+        familia nueva, importada de la teoría de la información
+        privada: no busca el soporte, evalúa el código con familias
+        de funciones correlacionadas. (b)~$94{,}3<256$: por debajo
+        del suelo trivial (enumerar la semilla de $256$ bits, con
+        una generación por candidato). Una estimación así solo es
+        compatible con (i)~una contabilidad que no cobra el trabajo
+        real por candidato/paso (memoria gratis, «operaciones de
+        bits», heurísticas no ejecutadas) o (ii)~una rotura
+        histórica. De ahí la exigencia de verificación pública: a
+        octubre de 2026, ninguna de las dos cosas está demostrada.
+  \item Total con $100$--$1400$ ejecuciones: sin memoria,
+        $2^{89}\cdot[100,1400]=2^{95{,}6}$--$2^{99{,}5}$; con cargo
+        severo, $2^{117}\cdot[100,1400]=2^{123{,}6}$--$2^{127{,}5}$.
+        La decodificación genérica en ese modelo para
+        \texttt{348864} está en $2^{158{,}6}$: ambos rangos quedan
+        por debajo: «nuestra mejor estimación; con el cargo de la
+        guía queda por debajo de la decodificación genérica en ese
+        modelo». Es exactamente la afirmación del equipo, y la
+        razón del sobresalto: incluso el rango con cargo severo
+        ($\le2^{127{,}5}$) roza el listón ISO de $2^{128}$.
+  \item $94{,}3+8\cdot6=142{,}3\approx2^{142}$: la regla de Weis
+        (unos $8$ bits por unidad de $m$) reproduce la instancia de
+        Bernstein ($n=6176$, $t=112$, $m=18$), cifrada en
+        $\approx2^{142}$, con error de $0{,}3$ bits. Clave pública
+        allí: $mt\lceil k/8\rceil=2016\cdot520=\num{1048320}$~B
+        $\approx1{,}0$~MB: cuatro veces la de \texttt{348864}
+        ($0{,}25$~MB) y del orden de la mayor actual
+        (\texttt{8192128}: $1{,}36$~MB). El eje $m$ compra
+        seguridad exponencial a precio lineal en la clave.
+  \item (a)~Demostrada (en su régimen asintótico: es un teorema
+        con ventaja $1-o(1)$). (b)~Estimada: el método de
+        recuperación es heurístico (cinco supuestos enumerados por
+        Weis, probados solo en claves pequeñas y retos TII) y la
+        cifra concreta $2^{102{,}4}$ depende de la contabilidad.
+        (c)~Heurística y disputada: la afirmación de Vedenev
+        «esencialmente una ejecución» no está verificada de forma
+        independiente (hay réplicas y contra-réplicas). (d)~Hecho
+        (negativo y verificable): nadie ha ejecutado el cómputo de
+        núcleos contra un conjunto real; los retos TII tienen
+        $n=214$.
+  \item $2^{94{,}3}$ frente a $2^{143}$ (AES-128): en el mismo
+        registro de «operaciones de bits», el ataque saldría
+        $48{,}7$ bits más barato: alarmante. Pero ese registro no
+        cobra la memoria ni la latencia; con el cargo severo
+        ($2^{117}$--$2^{128}$), el ataque cuesta tanto o más que
+        agotar AES-128: favorable al esquema. Falta: (i)~un modelo
+        de costes consensuado (cómo cobrar memoria y accesos) y
+        (ii)~una ejecución de extremo a extremo (nadie ha corrido
+        el método contra un conjunto real): sin ambas, la
+        comparación está abierta (BSI elige la precaución; el
+        equipo, su contabilidad clásica).
+  \item Ejemplos (límite de $80$ caracteres):
+        \emph{verdadero} ---~«McEliece: ataques de 2026 estimados,
+        ninguno ejecutado ni verificado»; \emph{falso por
+        alarma}~--- «McEliece roto: un ataque de $2^{94}$ desarma
+        el estándar ISO» (le falta: estimación, modelo de costes
+        disputado, no ejecutado); \emph{falso por
+        complacencia}~--- «McEliece intacto: nada ha cambiado»
+        (le falta: las estimaciones bajaron $9000$ bits en cuatro
+        años y el BSI desaconseja despliegues nuevos). (Ejercicio
+        abierto: intercambiar con un colega y discutir la cláusula
+        ausente.)
+\end{enumerate}

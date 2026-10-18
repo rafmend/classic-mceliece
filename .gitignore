@@ -1,0 +1,40 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest cache & test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+*.pk
+*.sk
+*.enc
+testkey*
+demo_*
+
+# LaTeX intermediate build files (keep final PDFs and sources clean)
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.lof
+*.lot
+*.idx
+*.ind
+*.ilg
+*.synctex.gz
+
+# Distribution & packaging
+build/
+dist/
+*.egg-info/
+
+# Environments & IDEs
+.venv/
+env/
+.vscode/
+.idea/
+.DS_Store

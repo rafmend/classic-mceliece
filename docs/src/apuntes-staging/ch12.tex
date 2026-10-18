@@ -1,0 +1,630 @@
+\chapter{Los conjuntos y las variantes}\label{ch:parametros}
+
+\begin{roadmap}
+El capítulo~\ref{ch:keygen} mostró cómo nace una clave; los
+capítulos~\ref{ch:encapdecap} y~\ref{ch:labkem}, cómo se encapsula y
+desencapsula. Falta el catálogo: qué conjuntos concretos define Classic
+McEliece, qué significan los sufijos \texttt{f}, \texttt{pc} y
+\texttt{pcf}, cómo se guardan claves y criptogramas byte a byte, y qué
+seguridad se les atribuye. Al terminar, el lector debería poder elegir
+un conjunto con criterio y saber cuántos bytes maneja en cada paso.
+\end{roadmap}
+
+\section{Los cinco tamaños}\label{sec:param-cinco}
+
+Las tablas~\ref{tab:keygen-pol} y~\ref{tab:keygen-tamanos} fijaron los
+cinco pares $(m,n,t)$ y el desglose interno de las claves. La
+tabla~\ref{tab:param-base} añade las dos cifras que faltaban para
+decidir: el criptograma y la categoría de seguridad.
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{lcrrrc}
+\toprule
+Conjunto & categoría & $ek$ (bytes) & $ct$ (bytes) & $sk$ (bytes) & ¿ISO?\\
+\midrule
+\texttt{mceliece348864} & 1 & \num{261120}  & 96  & \num{6492}  & no\\
+\texttt{mceliece460896} & 3 & \num{524160}  & 156 & \num{13608} & sí\\
+\texttt{mceliece6688128} & 5 & \num{1044992} & 208 & \num{13932} & sí\\
+\texttt{mceliece6960119} & 5 & \num{1047319} & 194 & \num{13948} & sí\\
+\texttt{mceliece8192128} & 5 & \num{1357824} & 208 & \num{14120} & sí\\
+\bottomrule
+\end{tabular}
+\caption{Los cinco conjuntos base, con
+$ek=mt\lceil k/8\rceil$, $ct=\lceil mt/8\rceil$ y $sk$ como en la
+tabla~\ref{tab:keygen-tamanos}. La columna «¿ISO?» anticipa la
+sección siguiente: el estándar ISO incluye los cuatro tamaños
+mayores, cada uno con cuatro variantes; \texttt{mceliece348864} queda
+fuera.}\label{tab:param-base}
+\end{table}
+
+¿De dónde salen estos números, a primera vista caprichosos? Los
+conjuntos se eligieron siempre \emph{maximizando la seguridad sujeta a
+un límite de tamaño} \cite{cmrationale}:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \texttt{mceliece6960119}, con $(n,t)=(6960,119)$, maximiza la
+        seguridad para claves públicas que quepan en $2^{20}$ bytes.
+        La elección de $n=6960$ viene de la optimización clásica de
+        2008: para límites de $2^{16}$ a $2^{20}$ bytes, los códigos
+        Goppa de longitudes $1744$, $2480$, $3408$, $4624$ y $6960$,
+        con $t$ proporcionalmente creciente, maximizan la dificultad
+        del ataque; la tasa óptima ronda $0{,}75$. La única diferencia
+        con aquella elección es que Classic McEliece añade $119$
+        errores en lugar de $121$: sin decodificación por listas no
+        puede decodificar de forma única más allá de la capacidad del
+        código, y añadir dos errores menos reduce marginalmente la
+        seguridad.
+  \item \texttt{mceliece6688128} también maximiza dentro de $2^{20}$
+        bytes, pero exigiendo que $n$ y $t$ sean múltiplos de $32$;
+        \texttt{mceliece460896} y \texttt{mceliece348864} hacen lo
+        mismo dentro de $2^{19}$ y $2^{18}$ bytes.
+  \item \texttt{mceliece8192128} es el conjunto «clásico»: $n$ y $t$
+        potencias de dos, como en el McEliece original de 1978, a
+        costa de pasarse un poco de $2^{20}$ bytes
+        ($\num{1357824}$ bytes $=1{,}29$~MiB).
+\end{itemize}
+
+Maximizar bajo un límite es más robusto que apuntar a un nivel exacto:
+las métricas de seguridad varían entre modelos, y un conjunto clavado
+a un objetivo puede quedar por debajo en otro modelo distinto. Al
+maximizar por tamaño, la incertidumbre cambia poco el orden.
+
+\begin{observacion}{Múltiplos de $32$: por qué}{param-mult32}
+Cuando $n$ y $t$ son múltiplos de $32$ ---y por tanto $mt$ y $k$
+también lo son, porque $k=n-mt$ y $q=2^{13}$--- no hay \emph{bits de
+relleno} en las codificaciones de claves y criptogramas, y la
+distinción entre las dos formas de leer un criptograma
+(sección~\ref{sec:param-narrowly}) desaparece. Es una pequeña ventaja
+de interoperabilidad a cambio de un pequeño empeoramiento en la
+relación tamaño-seguridad. Los conjuntos $3488/4608/6688$ y el
+$8192$ la tienen; el $6960$, no.
+\end{observacion}
+
+\section{Los dieciséis conjuntos de ISO}\label{sec:param-iso}
+
+ISO estandarizó Classic McEliece en junio de 2026 (enmienda 2 de
+ISO/IEC 18033-2:2006 \cite{iso18033}), y el estándar incluye
+\textbf{dieciséis conjuntos}: los cuatro tamaños de la
+tabla~\ref{tab:param-base} (sin \texttt{mceliece348864}) cruzados con
+cuatro variantes:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+  \item el conjunto \textbf{base}, tal cual lo define el equipo;
+  \item el sufijo \textbf{\texttt{f}}: forma semi-sistemática
+        $(\mu,\nu)=(32{,}64)$ (sección~\ref{sec:param-f});
+  \item el sufijo \textbf{\texttt{pc}}: confirmación de texto claro
+        (sección~\ref{sec:param-pc});
+  \item el sufijo \textbf{\texttt{pcf}}: ambas cosas a la vez.
+\end{itemize}
+
+La tabla~\ref{tab:param-iso} y la figura~\ref{fig:param-iso} muestran
+el catálogo completo. Obsérvese lo que cada sufijo hace a los tamaños:
+\texttt{f} no cambia nada; \texttt{pc} suma exactamente
+$\lceil\ell/8\rceil=32$ bytes al criptograma.
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccccc}
+\toprule
+tamaño & $(m,n,t,k)$ & $ek$ & $sk$ & $ct$ \texttt{base},\texttt{f} & $ct$ \texttt{pc},\texttt{pcf} & cat.\\
+\midrule
+\texttt{460896}  & $(13,4608,96,3360)$  & \num{524160}  & \num{13608} & 156 & 188 & 3\\
+\texttt{6688128} & $(13,6688,128,5024)$ & \num{1044992} & \num{13932} & 208 & 240 & 5\\
+\texttt{6960119} & $(13,6960,119,5413)$ & \num{1047319} & \num{13948} & 194 & 226 & 5\\
+\texttt{8192128} & $(13,8192,128,6528)$ & \num{1357824} & \num{14120} & 208 & 240 & 5\\
+\bottomrule
+\end{tabular}
+\caption[Los dieciséis conjuntos de ISO, cada fila con sus cuatro variantes.]{Los dieciséis conjuntos de ISO: cada fila, con los sufijos
+---, \texttt{f}, \texttt{pc}, \texttt{pcf}. El nombre completo es
+\texttt{mceliece} seguido del número y el sufijo, por ejemplo
+\texttt{mceliece6960119pcf}. Los tamaños de cada fila valen para las
+cuatro variantes salvo el criptograma de \texttt{pc}/\texttt{pcf}.}
+\label{tab:param-iso}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    chip/.style={draw=mcblue,fill=mcsky!45,rounded corners=3pt,align=center,
+      font=\footnotesize,inner sep=4pt,minimum width=3.5cm,minimum height=1.05cm},
+    pchip/.style={draw=mcorange,fill=mcorange2!55,rounded corners=3pt,align=center,
+      font=\footnotesize,inner sep=4pt,minimum width=3.5cm,minimum height=1.05cm},
+    head/.style={font=\small\bfseries}
+  ]
+  \node[head,color=mcblue] at (2.0,0.85) {base};
+  \node[head,color=mcblue] at (6.0,0.85) {\texttt{f}};
+  \node[head,color=mcorange] at (10.0,0.85) {\texttt{pc}};
+  \node[head,color=mcorange] at (14.0,0.85) {\texttt{pcf}};
+  \foreach \y/\nm/\ca/\cb in {0/mceliece460896/156/188,-1.4/mceliece6688128/208/240,-2.8/mceliece6960119/194/226,-4.2/mceliece8192128/208/240} {
+    \node[chip] at (2.0,\y) {\texttt{\nm}\\[1pt] $ct$: \ca\ bytes};
+    \node[chip] at (6.0,\y) {\texttt{\nm}\texttt{f}\\[1pt] $ct$: \ca\ bytes};
+    \node[pchip] at (10.0,\y) {\texttt{\nm}\texttt{pc}\\[1pt] $ct$: \cb\ bytes};
+    \node[pchip] at (14.0,\y) {\texttt{\nm}\texttt{pcf}\\[1pt] $ct$: \cb\ bytes};
+  }
+  \draw[decorate,decoration={brace,amplitude=5pt},thick,mcorange]
+    (8.2,-4.95) -- (15.8,-4.95);
+  \node[font=\scriptsize,color=mcorange,align=center] at (12.0,-5.55)
+    {$+\lceil\ell/8\rceil=32$ bytes de confirmación};
+  \draw[decorate,decoration={brace,mirror,amplitude=5pt},thick,mcblue]
+    (4.2,-4.95) -- (7.8,-4.95);
+  \node[font=\scriptsize,color=mcblue,align=center] at (6.0,-5.55)
+    {mismos tamaños:\\ otra generación de clave};
+\end{tikzpicture}
+\caption{Los dieciséis conjuntos de ISO, como familia. Los cuatro
+tamaños (filas) y las cuatro variantes (columnas). La confirmación de
+texto claro (\texttt{pc}, \texttt{pcf}) añade $32$ bytes al
+criptograma; la variante \texttt{f} no cambia ningún tamaño, solo la
+manera de generar la clave (forma semi-sistemática).}
+\label{fig:param-iso}
+\end{figure}
+
+¿Por qué falta \texttt{mceliece348864}? Por el modelo cuántico de ISO.
+ISO pidió a los candidatos \textbf{128 bits de seguridad en su modelo
+cuántico}, que asume la aceleración de raíz cuadrada de la búsqueda de
+Grover; pedir $128$ bits en ese modelo es mucho más exigente que pedir
+$128$ bits clásicos \cite{cmiso}. Con la raíz cuadrada aplicada a los
+mejores ataques clásicos sin trucos de memoria:
+
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+conjunto & ataque clásico & mitad (modelo cuántico) & ¿$\ge2^{128}$?\\
+\midrule
+\texttt{mceliece348864} & $2^{151{,}4}$ & $2^{75{,}7}$ & no\\
+\texttt{mceliece460896} & $2^{193{,}3}$ & $2^{96{,}7}$ & no\\
+\texttt{mceliece6688128} & $2^{268{,}0}$ & $2^{134{,}0}$ & sí\\
+\texttt{mceliece6960119} & $2^{268{,}4}$ & $2^{134{,}2}$ & sí\\
+\texttt{mceliece8192128} & $2^{303{,}2}$ & $2^{151{,}6}$ & sí\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Los valores clásicos son los de Stern bajo memoria gratis
+(tabla~\ref{tab:param-seguridad}), cuyos estimadores cuentan
+operaciones vectoriales como una sola operación, de modo que son cotas
+prudentes. Con esa vara, el borrador ISO que el equipo publicó en
+2023 incluyó solo los tamaños $6688$, $6960$ y $8192$ ---todos
+$\ge2^{134}$ cuánticos---. Pero la aceleración de Grover está, en la
+práctica, limitada por la latencia del ataque, así que ISO decidió
+estandarizar también \texttt{mceliece4*} (el conjunto $460896$) a
+sabiendas de que no alcanza el listón cuántico
+\cite{cmiso}. El equipo recomienda los tamaños
+\texttt{mceliece6*} para seguridad a largo plazo.
+
+\begin{historia}[Cómo llegó Classic McEliece a ISO]
+En octubre de 2022, unas diapositivas de Microsoft revelaron que el
+subcomité ISO/IEC JTC1/SC27/WG2 había solicitado comentarios sobre la
+inclusión de FrodoKEM, Classic McEliece y CRYSTALS-Kyber en sus
+estándares. El equipo de Classic McEliece preparó como borrador el
+documento \texttt{iso-mceliece-20230419} y lo publicó para recibir
+comentarios. Siguiendo la regla ISO de expresar los requisitos «en
+términos de rendimiento, no de diseño o características descriptivas»,
+el borrador especificaba las \emph{funciones matemáticas} a computar,
+sin constreñir cómo se computan. ISO estandarizó Classic McEliece en
+junio de 2026, junto a ML-KEM y FrodoKEM, como enmienda a
+ISO/IEC 18033-2 \cite{cmiso}. Mientras tanto, el NIST había
+\emph{aplazado} la estandarización de McEliece en 2025, alegando que
+«la estandarización concurrente por parte del NIST y de ISO crea el
+riesgo de estándares incompatibles» y que «después de que concluya el
+proceso de ISO, el NIST podría considerar desarrollar un estándar
+basado en el de ISO» (traducción propia, \cite{cmnist}). El NIST, por
+tanto, no ha estandarizado McEliece; su única selección de cifrado
+post-cuántico adicional ha sido HQC \cite{nist8545}.
+\end{historia}
+
+\section{La variante \texttt{f}: forma semi-sistemática}\label{sec:param-f}
+
+Recordemos cómo genera el capítulo~\ref{ch:keygen} la clave pública
+(sección~«MatGen»): se reduce la matriz binaria $\hat H$ a forma
+sistemática $(\mathrm{I}_{mt}\,|\,T)$ y, si la reducción falla, se
+empieza de nuevo con otra clave. Con $(\mu,\nu)=(0,0)$ el intento
+tiene éxito con probabilidad $\approx29\%$, así que en promedio hacen
+falta unos $3{,}4$ intentos \cite{cmrationale}.
+
+La forma \emph{$(\mu,\nu)$-semi-sistemática} relaja ese requisito. Una
+matriz $R$ de rango $r$ en forma escalonada reducida, con pivotes en
+las columnas $c_0<\cdots<c_{r-1}$, está en forma
+$(\mu,\nu)$-semi-sistemática si no tiene filas nulas, $c_i=i$ para
+$0\le i<r-\mu$, y cada pivote posterior admite un margen:
+\[
+  c_i\;\le\;i-\mu+\nu \qquad (0\le i<r).
+\]
+Para $(\mu,\nu)=(0,0)$ esto es, exactamente, la forma sistemática. Si
+$\nu>\mu$, hay muchas más matrices admisibles, y con
+$(\mu,\nu)=(32,64)$ basta con que $R$ sea escalonada salvo por los
+últimos $\mu=32$ pivotes, que pueden desplazarse dentro de una ventana
+de $\nu=64$ columnas. MatGen (caso general) reduce $\hat H$ hasta esa
+forma, y luego intercambia las últimas columnas $i\leftrightarrow c_i$
+---arrastrando los $\alpha_j$--- hasta dejar $(\mathrm{I}_{mt}\,|\,T)$.
+El «libro de permutaciones» $c=(c_{mt-\mu},\dots,c_{mt-1})$ se guarda
+en la clave privada (8 bytes; es la lista $c$ de la
+tabla~\ref{tab:keygen-tamanos}, presente también en los conjuntos
+$(\mu,\nu)=(0,0)$, donde codifica $2^{32}-1$).
+La figura~\ref{fig:param-semisys} resume el mecanismo.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    cell/.style={draw=mcgray!50,minimum size=0.30cm,inner sep=0pt},
+    one/.style={cell,fill=mcblue,draw=mcblue},
+    piv/.style={cell,fill=mcorange,draw=mcorange},
+    ilabel/.style={font=\scriptsize,align=center},
+    arr/.style={-{Stealth[length=2.2mm]},thick,mcgray}
+  ]
+  % ventana sombreada
+  \fill[mcorange2!30,rounded corners=2pt] (0.45,0.15) rectangle (2.25,-1.65);
+  % rejilla izquierda 6x20
+  \foreach \i in {0,...,5} \foreach \j in {0,...,19} {
+    \node[cell] at (\j*0.3,-\i*0.3) {};
+  }
+  \foreach \i/\j in {0/0,1/1} \node[one] at (\j*0.3,-\i*0.3) {};
+  \foreach \i/\j in {2/4,3/5,4/6,5/7} \node[piv] at (\j*0.3,-\i*0.3) {};
+  \node[ilabel] at (1.35,0.55) {escalonada:};
+  \node[ilabel,color=mcorange,align=center] at (4.6,-2.35)
+    {ventana de $\nu$ columnas:\\ últimas $\mu$ filas};
+  \draw[arr,mcorange] (3.3,-1.9) -- (2.05,-1.0);
+  % flecha
+  \draw[arr] (5.95,-0.75) -- (7.25,-0.75);
+  \node[ilabel] at (6.6,-0.28) {$\le\mu$ intercambios};
+  % rejilla derecha 6x12 (I|T)
+  \fill[mcsky!45,rounded corners=2pt] (9.35,0.15) rectangle (11.05,-1.65);
+  \foreach \i in {0,...,5} \foreach \j in {0,...,11} {
+    \node[cell] at (7.6+\j*0.3,-\i*0.3) {};
+  }
+  \foreach \i in {0,...,5} \node[one] at (7.6+\i*0.3,-\i*0.3) {};
+  \node[ilabel] at (9.3,0.55) {sistemática};
+  \node[ilabel] at (9.3,-1.95) {$(\mathrm{I}_{mt}\,|\,T)$: clave pública};
+  \node[ilabel,color=mcsky] at (11.5,-0.75) {$T$};
+\end{tikzpicture}
+\caption{La forma $(\mu,\nu)$-semi-sistemática, en esquema reducido
+($\mu=4$, $\nu=6$; en el estándar, $(32,64)$). Izquierda: la matriz
+escalonada; los primeros $mt-\mu$ pivotes ya están en la diagonal y
+los últimos $\mu$ viven dentro de una ventana de $\nu$ columnas.
+Basta con $\le\mu$ intercambios de columnas para alcanzar la forma
+sistemática de la derecha.}
+\label{fig:param-semisys}
+\end{figure}
+
+¿Qué se gana? Probabilidad de éxito. Con $(\mu,\nu)=(32,64)$ la
+probabilidad de fallo de cada intento cae por debajo de $2^{-30}$: casi
+siempre basta \emph{un} intento, frente a los $\approx3{,}4$ de
+$(\mu,\nu)=(0,0)$. El precio: la computación en forma escalonada debe
+hacerse sin ramificaciones dependientes de secretos (en tiempo
+constante), y eso solo es razonable si queda confinada a una ventana
+pequeña ---de ahí que $\nu$ se mantenga modesto---. La ganancia de
+holgura en la demostración de seguridad también se cuantifica: aceptar
+más matrices pierde como mucho $2$ bits de tensión en la reducción
+\cite{cmrationale}.
+
+¿Por qué existen entonces conjuntos sin \texttt{f}? Porque hay tres
+argumentos para mantener $(\mu,\nu)=(0,0)$ \cite{cmrationale}: (1)~el
+software optimizado de Classic McEliece ya acelera los reintentos
+saltándose casi toda la eliminación gaussiana en los casos de fallo;
+(2)~muchas aplicaciones no tienen la generación de claves como cuello
+de botella; (3)~la simplicidad tiene valor. ISO estandarizó las
+cuatro variantes para cada tamaño: quien quiera velocidad de
+generación elige \texttt{f}; quien prefiera el camino más simple y
+auditado, el conjunto base.
+
+\section{La variante \texttt{pc}: confirmación de texto claro}\label{sec:param-pc}
+
+En la ronda 3, la transformación CCA de Classic McEliece usaba
+\emph{dos} defensas a la vez: rechazo implícito \emph{y} confirmación
+de texto claro. La confirmación añade un segundo componente al
+criptograma, $C_1=H(2,e)$, y el descifrado lo comprueba
+\cite{cmpc}:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item $\textsf{Encap}$: $C_0=\textsf{Encode}(e,T)$,
+        $C_1=H(2,e)$; el criptograma es $C=(C_0,C_1)$ y la clave,
+        $K=H(1,e,C)$.
+  \item $\textsf{Decap}$: se parte $C=(C_0,C_1)$; se descifra
+        $C_0$ como siempre; después se recalcula $C_1'=H(2,e)$ y, si
+        no coincide con $C_1$, también se toma la rama de rechazo
+        ($e\leftarrow s$, $b\leftarrow0$). La clave sale de
+        $K=H(b,e,C)$.
+\end{itemize}
+
+Nótese el detalle: la confirmación \emph{no} introduce errores
+explícitos. Si la comprobación falla, \textsf{Decap} sigue devolviendo
+$32$ bytes por la rama de rechazo implícito; el KEM continúa siendo
+una función total. Lo que añade es una \emph{demostración}: $C_1$ solo
+puede calcularlo quien conoce $e$, así que el criptograma certifica
+que su emisor conocía el error. Quien posee la clave privada puede
+verificar esa demostración explícitamente (descifra $C_0$, recalcula
+$H(2,e')$ y compara con $C_1$), si su aplicación lo necesita.
+
+El costo y la historia: $C_1$ ocupa $\lceil\ell/8\rceil=32$ bytes (los
+mismos que una clave de sesión), y el hash pasa a tener tres tipos de
+entrada, distinguidas por el primer byte: $(2,v)$, $(1,v,C)$ y
+$(0,v,C)$. En la ronda 4, el equipo \emph{quitó} la confirmación del
+conjunto por defecto y la dejó como variante opcional
+\cite{cmmods3}, por tres razones: (1)~separarse limpiamente de la
+patente estadounidense US~9.912.479 ---que no se aplica literalmente
+a Classic McEliece, cuyo paquete de cifrado tiene un solo objeto, el
+error, y no «el vector de error y el valor del texto claro», pero cuya
+sombra legal se prefirió despejar, volviendo a la «forma tradicional
+de Niederreiter»---; (2)~ahorrar los $32$ bytes, que en un esquema de
+criptogramas diminutos se notan; y (3)~simplificar especificación y
+software, ya que para las demostraciones ajustadas de IND-CCA2 en ROM
+y cuasi-ajustadas en QROM (teoremas~\ref{thm:kem-rom}
+y~\ref{thm:kem-qrom}) el rechazo implícito por sí solo basta.
+En el debe: quitar la confirmación abre un ataque eficiente en un
+modelo \emph{más allá} de IND-CCA2 en el que un solo bit de la clave
+privada almacenada se invierte (por ejemplo, un fallo de DRAM); el
+ataque análogo contra NTRU-HRSS \cite{ntrufault} motivó precisamente
+este cuidado. La mitigación recomendada no toca el KEM: codificar la
+clave privada almacenada con corrección de errores (los sistemas
+comerciales ya hacen SECDED sobre la DRAM). ISO, en fin, estandariza
+las dos familias de variantes: quien quiera las defensas duales de la
+ronda 3 usa \texttt{pc} o \texttt{pcf}.
+
+\section{Simply Decoded y Narrowly Decoded: el relleno}
+\label{sec:param-narrowly}
+
+Los conjuntos de parámetros no eligen un múltiplo de $8$ por
+casualidad: el criptograma ocupa $\lceil mt/8\rceil$ bytes y la clave
+pública $mt\lceil k/8\rceil$ bytes (una fila de $T$ por línea, rellena
+cada una a byte completo). Cuando $mt$ o $k$ \emph{no} son múltiplos
+de $8$, la última posición contiene bits de relleno que la
+especificación deja a cero, y ahí nacen dos formas de leer una cadena
+de bytes \cite{cmspec}:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \textbf{Simply Decoded}: los bits de relleno se ignoran al
+        interpretar la entrada;
+  \item \textbf{Narrowly Decoded}: se rechazan las entradas
+        (criptogramas y claves públicas) con relleno distinto de
+        cero, devolviendo $\bot$.
+\end{itemize}
+
+De los dieciséis conjuntos, \textbf{solo \texttt{mceliece6960119}
+tiene relleno}: allí $mt=1547$ (el criptograma tiene $194$ bytes, con
+$5$ bits de relleno en el último) y $k=5413$ (cada fila de la clave
+pública tiene $3$ bits de relleno). En los demás, $mt$ y $k$ son
+múltiplos de $8$ y las dos lecturas coinciden. La
+figura~\ref{fig:param-narrowly} ilustra el caso.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    bcell/.style={draw=mcgray!60,minimum size=0.5cm,inner sep=0pt,font=\scriptsize},
+    rcell/.style={bcell,fill=mcblue!25},
+    pcell/.style={bcell,fill=mcorange2!55},
+    arr/.style={-{Stealth[length=2.2mm]},thick,mcgray},
+    lbl/.style={font=\scriptsize,align=center}
+  ]
+  % bytes completos
+  \node[draw=mcgray!60,rounded corners=2pt,minimum width=3.4cm,minimum height=0.5cm,
+        font=\scriptsize,fill=mcgray!10] at (1.7,0) {bytes $0$--$192$};
+  % ultimo byte
+  \foreach \b in {0,...,7} {
+    \pgfmathsetmacro{\cx}{4.15+\b*0.5}
+    \ifnum\b<3 \node[rcell] at (\cx,0) {\b};
+    \else \node[pcell] at (\cx,0) {\b};\fi
+  }
+  \node[lbl] at (5.9,0.55) {byte $193$ (el último): bits $1544$--$1551$};
+  \node[rcell,minimum size=0.22cm] at (4.35,-0.75) {};
+  \node[lbl,anchor=west] at (4.5,-0.75) {bits reales ($1547$ en total)};
+  \node[pcell,minimum size=0.22cm] at (7.3,-0.75) {};
+  \node[lbl,anchor=west] at (7.45,-0.75) {relleno ($5$ bits)};
+  % interpretaciones
+  \node[draw=mcgreen,fill=mcgreen2!45,rounded corners=2pt,font=\scriptsize,
+        align=center,inner sep=4pt,text width=4.6cm] (sim) at (2.2,-2.5)
+        {\textbf{Simply}: se ignoran los bits de relleno: el criptograma
+         es el mismo elemento de $\Ftwo^{1547}$ y la clave no cambia.};
+  \node[draw=mcred,fill=mcred2!45,rounded corners=2pt,font=\scriptsize,
+        align=center,inner sep=4pt,text width=4.6cm] (nar) at (8.2,-2.5)
+        {\textbf{Narrowly}: si algún bit de relleno es $1$, la entrada
+         se rechaza ($\bot$).};
+  \draw[arr] (5.4,-1.15) -- (3.6,-1.85);
+  \draw[arr] (6.4,-1.15) -- (8.2,-1.85);
+\end{tikzpicture}
+\caption{El relleno de \texttt{mceliece6960119}: el criptograma son
+$1547$ bits dentro de $194$ bytes, y a los $5$ bits finales la
+especificación les da dos lecturas. Una implementación u otra debe
+elegirse de forma consistente entre las dos partes del protocolo;
+mezclarlas convierte en divergencia lo que es una maleabilidad
+benigna.}
+\label{fig:param-narrowly}
+\end{figure}
+
+¿Por qué se llama maleabilidad benigna? Porque dos cadenas de bytes
+que difieran solo en el relleno representan el \emph{mismo}
+criptograma (el mismo elemento de $\Ftwo^{mt}$), y por tanto el mismo
+$K$ en modo Simply; en modo Narrowly una se acepta y la otra no. La
+distinción no rompe la seguridad ---el teorema de IND-CCA2 cubre las
+cadenas codificadas---, pero es un contrato de interoperabilidad que
+las partes deben acordar.
+
+\begin{trampa}[Tres bits por fila, $580$ bytes]
+Un implementador que empaquete la clave pública «apretada», como una
+tira continua de $kmt$ bits, obtendrá para \texttt{mceliece6960119}
+una clave de $\lceil kmt/8\rceil=1\,046\,739$ bytes. La cadena
+estándar tiene $1\,047\,319$: la diferencia, $580$ bytes, son los
+$3$ bits de relleno de cada una de las $1547$ filas
+($1547\times3/8=580{,}125$). Ambos empaquetados describen la misma
+matriz $T$, pero solo el segundo es válido frente a otra
+implementación ---y frente a los vectores de prueba del
+estándar---. Con $T$ en la mano el error se detecta enseguida, pero es
+un clásico de los primeros días de una implementación.
+\end{trampa}
+
+\section{¿Cuánta seguridad?}\label{sec:param-seguridad}
+
+La tabla~\ref{tab:param-seguridad} resume las estimaciones de la guía
+de seguridad \cite{cmsecurity}: el mejor ataque de decodificación por
+conjuntos de información (capítulo~\ref{ch:isd}) según el estimador de
+Esser--Bellini, en dos de sus modelos de memoria, junto a la categoría
+que cada conjunto reclama.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lccccc}
+\toprule
+conjunto & Prange & MO (mem.\ libre) & MO (mem.\ con costo) & categoría & categoría\\
+ & & & & (mem.\ realista) & (mem.\ gratis)\\
+\midrule
+\texttt{mceliece348864} & $173{,}4$ & $140{,}8$ & $158{,}6$ & 1 & 1\\
+\texttt{mceliece460896} & $216{,}8$ & $179{,}8$ & $201{,}0$ & 3 & 2\\
+\texttt{mceliece6688128} & $295{,}7$ & $246{,}2$ & $278{,}2$ & 5 & 4\\
+\texttt{mceliece6960119} & $296{,}8$ & $245{,}7$ & $279{,}2$ & 5 & 4\\
+\texttt{mceliece8192128} & $334{,}1$ & $275{,}6$ & $315{,}6$ & 5 & 5\\
+\bottomrule
+\end{tabular}
+\caption{Costos en bits ($\log_2$) de los mejores ataques conocidos
+según el estimador de Esser--Bellini: contra Prange (1962) y contra
+May--Ozerov (MO), con memoria de acceso gratis y con costo de acceso
+en raíz cuadrada. Las dos últimas columnas: la categoría que el
+equipo asigna contando costos realistas de memoria, y la que
+correspondería si la memoria se contara como gratis.}
+\label{tab:param-seguridad}
+\end{table}
+
+Tres advertencias sobre esa tabla, todas de la propia guía:
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=3pt]
+  \item \textbf{Los números subestiman.} El estimador cuenta cada
+        operación vectorial como \emph{una} operación, sea cual sea su
+        longitud. El $140{,}8$ de \texttt{mceliece348864}, por ejemplo,
+        cuenta más de $2^{143}$ operaciones de bits, y el ataque
+        requiere memoria $2^{86{,}6}$ \cite{cmsecurity}.
+  \item \textbf{La memoria no es gratis.} La columna «mem.\ libre»
+        supone acceso libre a memoria arbitrariamente grande,
+        físicamente irreal; ahí los algoritmos con
+        «representaciones» (BJMM, MO) brillan. Cuando se cobra la
+        memoria a su costo plausible, la ventaja se estrecha.
+  \item \textbf{Las categorías dependen del modelo.} Contando
+        memoria realista, el equipo asigna $1,3,5,5,5$; contando
+        memoria gratis y operaciones de bits, $1,2,4,4,5$. Ambas
+        tablas son sostenibles sobre los mismos datos; el número clave
+        es que \texttt{mceliece6960119} es categoría 5 si se cuentan
+        los accesos a memoria ($2^{279{,}2}>2^{272}$, la referencia de
+        AES-256) y categoría 4 si no ($2^{245{,}7}<2^{256}$).
+\end{enumerate}
+
+Las referencias del NIST para las categorías 1, 3 y 5 son búsquedas
+exhaustivas de AES-128, AES-192 y AES-256, estimadas en $2^{143}$,
+$2^{207}$ y $2^{272}$ operaciones de bits. De ahí las tensiones
+numéricas reseñadas: $140{,}8$, el peor valor, roza por abajo la
+referencia de la categoría 1; $201{,}0$ cae bajo $2^{207}$; y
+$245{,}7$, bajo $2^{256}$. El equipo responde, con razón documentada,
+que estas comparaciones mezclan métricas: no es lo mismo «operaciones
+de bits contadas por un estimador que trata un XOR de mil bytes como
+una operación» que operaciones reales. La discusión completa, y por
+qué el récord de estabilidad del esquema es el argumento más fuerte,
+llega en los capítulos~\ref{ch:seguridad} y~\ref{ch:isd}.
+
+\section{Elegir un conjunto}\label{sec:param-elegir}
+
+Con todo lo anterior, la guía práctica es corta:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \textbf{Tamaño.} Para seguridad a largo plazo, el equipo
+        recomienda los tamaños \texttt{mceliece6*}
+        ($6688128$, $6960119$) \cite{cmiso}; añaden un margen
+        generoso sobre la categoría~5 clásica. Si el entorno aprieta
+        (clave pública de $512$~KiB), el candidato es
+        \texttt{mceliece460896}; \texttt{mceliece348864} existe en la
+        especificación, pero queda fuera de ISO y no es la elección
+        para décadas.
+  \item \textbf{Variante \texttt{f}.} Úsese cuando la generación de
+        claves sea cuello de botella o deba ser rápida en tiempo
+        constante; añade la forma semi-sistemática sin cambiar
+        ningún tamaño.
+  \item \textbf{Variante \texttt{pc}/\texttt{pcf}.} Úsese cuando el
+        protocolo quiera la confirmación de texto claro de la ronda 3
+        (por ejemplo, para verificar el conocimiento de $e$ o para
+        defensas en modelos con fallos de clave privada); cuesta
+        $32$ bytes por criptograma.
+\end{itemize}
+
+Para calibrar los compromisos, la tabla~\ref{tab:param-contexto}
+compara los tamaños con los otros KEM que un despliegue real barajará.
+La silueta de Classic McEliece es inconfundible: una clave pública
+doscientas veces mayor que la de ML-KEM, un criptograma entre cinco y
+ocho veces menor, y una clave privada moderada. La clave de HQC, en
+cambio, es de $40$ bytes: es una semilla, regenerada al vuelo, la
+misma filosofía que la $\delta$ de Classic McEliece pero llevada al
+secreto entero.
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{lrrr}
+\toprule
+esquema & $ek$ (bytes) & $ct$ (bytes) & $sk$ (bytes)\\
+\midrule
+ML-KEM-768 & 1184 & 1088 & 2400\\
+ML-KEM-1024 & 1568 & 1568 & 3168\\
+HQC-128 & 2249 & 4497 & 40\\
+HQC-256 & 7245 & 14485 & 40\\
+\texttt{mceliece460896} & \num{524160} & 156 & \num{13608}\\
+\texttt{mceliece6960119} & \num{1047319} & 194 & \num{13948}\\
+\bottomrule
+\end{tabular}
+\caption{Tamaños de los KEM post-cuánticos relevantes (ML-KEM según
+FIPS~203 \cite{fips203}; HQC según el informe del NIST \cite{nist8545};
+Classic McEliece según la tabla~\ref{tab:param-base}). El criptograma
+de McEliece es el más pequeño con diferencia; la clave pública, la más
+grande.}
+\label{tab:param-contexto}
+\end{table}
+
+\begin{practica}[¿Y en un protocolo real?]
+La clave pública de Classic McEliece no viaja en cada conexión: viaja
+una vez y se cachea (es estable durante años). El criptograma, en
+cambio, viaja en cada intercambio: ahí el tamaño importa, y es donde
+los $96$--$240$ bytes juegan a favor. En TLS~1.3, por ejemplo, ML-KEM
+y McEliece pueden convivir como grupos híbridos; la página de
+implementación del equipo documenta los detalles
+\cite{cmimpl}.
+\end{practica}
+
+\section{Ejercicios}\label{sec:param-ejercicios}
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=4pt]
+  \item \textbf{Aritmética de bytes.} Con $ct=\lceil mt/8\rceil$ y
+        $ek=mt\lceil k/8\rceil$, verifique las columnas de la
+        tabla~\ref{tab:param-base}. ¿Por qué para cuatro conjuntos
+        $ek=\lceil kmt/8\rceil$ pero para \texttt{mceliece6960119} no?
+        Calcule la diferencia exacta.
+  \item \textbf{La variante \texttt{pc}.} Para
+        \texttt{mceliece460896pc}, complete la
+        tabla~\ref{tab:param-iso} para los dieciséis conjuntos y
+        calcule después cuántos bytes recibe cada hash: $H(2,e)$ por
+        un lado, y $H(1,e,C)$ y $H(0,s,C)$ por otro.
+  \item \textbf{El listón cuántico de ISO.} Usando el modelo de raíz
+        cuadrada, calcule la mitad del logaritmo del ataque de Stern
+        (tabla~\ref{tab:param-seguridad}) para los cinco conjuntos y
+        compruebe qué conjuntos superan $2^{128}$. ¿Coincide con los
+        que eligió el borrador ISO? ¿Y con lo que ISO decidió
+        estandarizar al final? Explique la diferencia.
+  \item \textbf{Intentos de generación.} Con $(\mu,\nu)=(0,0)$ el
+        éxito de MatGen ronda el $29\%$: calcule el número esperado de
+        intentos y la probabilidad de necesitar más de dos. Con
+        $(\mu,\nu)=(32,64)$ el fallo por intento es $<2^{-30}$:
+        calcule el número esperado de intentos. ¿Cuánto trabajo de
+        generación se ahorra la variante \texttt{f}?
+  \item \textbf{Relleno benigno.} Para \texttt{mceliece6960119},
+        construya dos cadenas de $194$ bytes que difieran solo en los
+        $5$ bits de relleno. ¿Cuántos $K$ distintos producen en modo
+        Simply? ¿Y en modo Narrowly? ¿Por qué esta diferencia debe
+        resolverse por acuerdo de protocolo y no dejarse al azar de
+        la implementación?
+  \item \textbf{Elegir con criterio.} Un servicio de mensajería
+        cachea claves públicas de servidor y envía millones de
+        criptogramas pequeños; una etiqueta IoT de bajo consumo
+        genera su propia clave una vez y no la cachea. ¿Qué conjunto
+        y qué variante propondría para cada caso? Justifique con las
+        tablas~\ref{tab:param-base} y~\ref{tab:param-contexto}.
+\end{enumerate}

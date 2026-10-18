@@ -1,0 +1,629 @@
+% ======================================================================
+%  APÉNDICE A — EL PROGRAMA DEL JUGUETE
+% ======================================================================
+
+\appendix
+\chapter{El programa del juguete: \texttt{toy.py}}\label{app:codigo}
+
+\begin{roadmap}
+Este apéndice reproduce, íntegro y ejecutable, el programa que generó
+las cifras de los laboratorios de los
+capítulos~\ref{ch:labgoppa} y~\ref{ch:labkem}: el McEliece de juguete
+sobre $\FF4$ con $n=16$ y $t=2$. El listado no es decorativo: cada
+número impreso en esos capítulos está aquí calculado, y cada
+afirmación delicada está protegida por una aserción que detiene el
+programa si algo no cuadra.
+\end{roadmap}
+
+\section{Qué es y cómo se ejecuta}
+
+\texttt{toy.py} es un único archivo de Python~3, sin más dependencia
+que la biblioteca estándar (\texttt{hashlib.shake\_256}); ocupa unas
+$450$ líneas. Se ejecuta con \texttt{python3 toy.py} y termina
+imprimiendo \texttt{TODAS LAS COMPROBACIONES OK} si todo cuadra; si
+una aserción falla, se detiene en la primera discrepancia. Reproduce,
+en orden:
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+  \item el cuerpo $\FF4$ y las $16$ columnas de la matriz $\tilde H$
+        de la tabla~\ref{tab:lab-columnas} (capítulo~\ref{ch:labgoppa});
+  \item la forma sistemática $(\mathrm{I}_8\,|\,T)$, la matriz
+        $G=(T^{\top}\,|\,\mathrm{I}_8)$ y la permutación
+        $\sigma$ del laboratorio (figura~\ref{fig:lab-SPG});
+  \item el síndrome del error $e$ con soporte $\{10,13\}$ y la
+        traza completa de Patterson, incluidos sus certificados;
+  \item la comprobación de tipo van Lint--MacWilliams: las $2^{16}$
+        palabras del código, contadas dos veces y comparadas;
+  \item los $120$ errores de peso $\le 2$, los $137$ síndromes
+        alcanzables y la lista completa de síndromes;
+  \item la cadena del capítulo~\ref{ch:labkem}: la semilla $s$, el
+        error $e$, el criptograma $C$, la clave $K$ y el criptograma
+        manipulado $\tilde C$ con su rechazo implícito $K''$.
+\end{enumerate}
+
+\section{El listado completo}
+
+\begin{lstlisting}
+#!/usr/bin/env python3
+# ----------------------------------------------------------------------
+# toy.py - el juguete de bolsillo de los capitulos 4, 5 y 11
+# Reproduce, paso a paso, todas las cifras impresas del libro.
+# Uso:  python3 toy.py
+# ----------------------------------------------------------------------
+
+from hashlib import shake_256
+
+# ======================================================================
+# 1. GF(16) = F2[z]/(z^4+z+1)
+# Cada elemento es un entero 0..15 (un digito hexadecimal): el bit l
+# es el coeficiente de z^l.  z = 2, y z^4+1 = z.
+# ======================================================================
+
+def _tablas():
+    exp, log = [0] * 15, [0] * 16
+    v = 1
+    for e in range(15):
+        exp[e] = v
+        log[v] = e
+        v <<= 1
+        if v & 0x10:
+            v ^= 0x13                      # z^4 = z+1
+    return exp, log
+
+EXP, LOG = _tablas()
+
+def mul(a, b):
+    return 0 if not a or not b else EXP[(LOG[a] + LOG[b]) % 15]
+
+def inv(a):
+    return EXP[(-LOG[a]) % 15]
+
+def pw(a, k):
+    return 0 if not a else EXP[(LOG[a] * k) % 15]
+
+# ======================================================================
+# 2. Polinomios sobre GF(16): listas de coeficientes, indice = grado
+# ======================================================================
+
+def trim(p):
+    p = p[:]
+    while len(p) > 1 and p[-1] == 0:
+        p.pop()
+    return p
+
+def p_add(a, b):
+    r = [0] * max(len(a), len(b))
+    for i, c in enumerate(a):
+        r[i] ^= c
+    for i, c in enumerate(b):
+        r[i] ^= c
+    return trim(r)
+
+def p_esc(c, p):                           # multiplica por el escalar c
+    return trim([mul(c, x) for x in p])
+
+def p_mul(a, b):
+    r = [0] * (len(a) + len(b) - 1)
+    for i, x in enumerate(a):
+        if x:
+            for j, y in enumerate(b):
+                if y:
+                    r[i + j] ^= mul(x, y)
+    return trim(r)
+
+def p_divmod(a, b):                        # a = q*b + r,  deg r < deg b
+    a = trim(a)
+    q = [0] * (max(0, len(a) - len(b)) + 1)
+    while a != [0] and len(a) >= len(b):
+        c = mul(a[-1], inv(b[-1]))
+        k = len(a) - len(b)
+        q[k] ^= c
+        for i, y in enumerate(b):
+            a[i + k] ^= mul(c, y)
+        a = trim(a)
+    return trim(q), a
+
+def p_mod(a, m):
+    return p_divmod(a, m)[1]
+
+def p_eval(p, x):
+    r = 0
+    for c in reversed(p):
+        r = mul(r, x) ^ c
+    return r
+
+def p_inv_mod(a, m):                       # a^{-1} mod m  (gcd(a,m)=1)
+    r0, r1 = trim(m), p_mod(a, m)
+    u0, u1 = [0], [1]                      # invariante: r_i = u_i*a mod m
+    while len(r1) > 1:                     # hasta llegar a una constante
+        assert r1 != [0], "sin inverso: gcd != 1"
+        q, r2 = p_divmod(r0, r1)
+        r0, r1 = r1, r2
+        u0, u1 = u1, p_add(u0, p_mul(q, u1))
+    assert r1 != [0], "sin inverso: gcd != 1"
+    lam = r1[0]                            # r1 = lam == u1*a  ->  1 = (u1/lam)*a
+    return p_mod(p_esc(inv(lam), u1), m)
+
+def p_sqrt_mod(v, g):                      # deg g = 2: anillo GF(256)
+    w = p_mod(v, g)                        # raiz = v^(2^7)
+    for _ in range(7):
+        w = p_mod(p_mul(w, w), g)
+    return w
+
+def p_hex(p):
+    def t(i):
+        return "" if i == 0 else ("x" if i == 1 else f"x^{i}")
+    s = '+'.join(f"{c:x}{t(i)}" for i, c in enumerate(p) if c)
+    return s or '0'
+
+# ======================================================================
+# 3. El codigo de Goppa del juguete (m = 4, n = 16, t = 2)
+# ======================================================================
+
+N, M4 = 16, 4
+ALPHA = list(range(N))                     # L = (0, 1, z, 1+z, ...)
+G_POLY = [0x8, 0x1, 0x1]                   # g(x) = x^2 + x + z^3
+INV_G = [inv(p_eval(G_POLY, a)) for a in ALPHA]
+COLS = [(INV_G[j], mul(ALPHA[j], INV_G[j])) for j in range(N)]
+
+def sbits(v, n):
+    return ''.join(str((v >> i) & 1) for i in range(n))
+
+def vbits(bs):
+    return sum(b << i for i, b in enumerate(bs))
+
+def syndrome(word):
+    # S(x) = suma_j palabra_j * (x + a_j + 1)/g(a_j)   (mod g)
+    S = [0]
+    for j, b in enumerate(word):
+        if b:
+            S = p_add(S, p_mod(p_mul([ALPHA[j] ^ 1, 1], [INV_G[j]]), G_POLY))
+    return S
+
+def patterson(S, traza=None):
+    R = p_inv_mod(S, G_POLY)                    # R = S^{-1}
+    W = p_sqrt_mod(p_add(R, [0, 1]), G_POLY)    # W^2 = x + R
+    tau = p_inv_mod(W, G_POLY)                  # tau = W^{-1}
+    A, B = p_divmod(G_POLY, tau)                # g = tau*A + B
+    sigma = p_add(p_mul(A, A), p_mul([0, 1], p_mul(B, B)))
+    if traza is not None:
+        traza.update(R=R, W=W, tau=tau, A=A, B=B)
+    return sigma
+
+def raices(sigma):
+    return [j for j in range(N) if p_eval(sigma, ALPHA[j]) == 0]
+
+# ---- expansion a bits, forma sistematica (I8|T) y G = (T^t|I8) -------
+
+def hhat_variante(variante):
+    # variante: (intercambio, invertir_bits)
+    swap, msb = variante
+    u = lambda j: COLS[j][1] if swap else COLS[j][0]   # filas 0-3
+    v = lambda j: COLS[j][0] if swap else COLS[j][1]   # filas 4-7
+    H = []
+    for r in range(4):
+        H.append([(u(j) >> (3 - r if msb else r)) & 1 for j in range(N)])
+    for r in range(4):
+        H.append([(v(j) >> (3 - r if msb else r)) & 1 for j in range(N)])
+    return H
+
+def sistematica(H):
+    A = [row[:] for row in H]
+    nr = len(A)
+    for c in range(nr):
+        piv = next((r for r in range(c, nr) if A[r][c]), None)
+        if piv is None:
+            return None
+        A[c], A[piv] = A[piv], A[c]
+        for r in range(nr):
+            if r != c and A[r][c]:
+                A[r] = [x ^ y for x, y in zip(A[r], A[c])]
+    return [row[nr:] for row in A]
+
+EXPECT_G = ["1100010110000000", "1100101001000000", "0110110000100000",
+            "1001110000010000", "1011101000001000", "0111010100000100",
+            "0110101100000010", "1001011100000001"]
+
+def elige_convencion():
+    for variante in ((0, 0), (0, 1), (1, 0), (1, 1)):
+        H = hhat_variante(variante)
+        T = sistematica(H)
+        if T is None:
+            continue
+        G = [sbits(sum(T[a][i] << a for a in range(8)), 8)
+             + sbits(1 << i, 8) for i in range(8)]
+        if G == EXPECT_G:
+            return H, T, G, variante
+    raise SystemExit("ninguna convencion reproduce la G del libro")
+
+HHAT, T, G, VARIANTE = elige_convencion()
+
+print("=" * 70)
+print("0. GF(16) = F2[z]/(z^4+z+1);  1/g y a/g se calculan en GF(16).")
+print("   Potencias de z:", ' '.join(f"z^{e}={EXP[e]:x}" for e in range(15)))
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("1. Las 16 columnas de H~ (tabla del libro):  (1/g(a_j), a_j/g(a_j))")
+EXPECT_COLS = {0: (0xf, 0x0), 1: (0xf, 0xf), 2: (0x3, 0x6), 3: (0x3, 0x5),
+               4: (0x8, 0x6), 5: (0x8, 0xe), 6: (0x2, 0xc), 7: (0x2, 0xe),
+               8: (0xa, 0xf), 9: (0xa, 0x5), 10: (0xc, 0x1), 11: (0xc, 0xd),
+               12: (0x5, 0x9), 13: (0x5, 0xc), 14: (0x4, 0xd), 15: (0x4, 0x9)}
+for j in range(N):
+    a, b = COLS[j]
+    assert (a, b) == EXPECT_COLS[j], f"columna {j} discrepa"
+    print(f"   j={j:2d}  a_j={ALPHA[j]:x}  g(a_j)={p_eval(G_POLY, ALPHA[j]):x}"
+          f"  (1/g, a/g)=({a:x},{b:x})")
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("2. Forma sistematica: filas de G = (T^t | I8)  [T unica]")
+for i, row in enumerate(G):
+    assert row == EXPECT_G[i]
+    print(f"   G_{i} = {row}")
+print("   columnas de T (hex):",
+      ' '.join(f"{sum(T[a][i] << a for a in range(8)):02x}" for i in range(8)))
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("3. Sindrome del error e = posiciones {10, 13}")
+e2 = [0] * N
+e2[10] = e2[13] = 1
+s0 = 0
+s1 = 0
+for j in (10, 13):
+    s0 ^= COLS[j][0]
+    s1 ^= COLS[j][1]
+assert (s0, s1) == (0x9, 0xd)              # H~ e = (9, d)
+S_e = syndrome(e2)
+print(f"   H~ e = (s0, s1) = ({s0:x}, {s1:x})")
+print(f"   S(x) = s0*x + (s0+s1) = {p_hex(S_e)}   con S_e = [{S_e[0]:x}, {S_e[1]:x}]")
+assert S_e == [0x4, 0x9]
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("4. Patterson paso a paso para S(x) = 4 + 9x (con certificados)")
+tr = {}
+sig49 = patterson([0x4, 0x9], traza=tr)
+R, W, tau, A, B = tr["R"], tr["W"], tr["tau"], tr["A"], tr["B"]
+assert R == [0xa, 0x7]
+assert p_mul([0x4, 0x9], R) == p_add([1], p_esc(0xa, G_POLY))
+assert p_add(R, [0, 1]) == [0xa, 0x6]
+assert W == [0xc, 0x7]
+assert p_mul(W, W) == p_add([0xa, 0x6], p_esc(0x6, G_POLY))
+assert tau == [0x3, 0xb]
+assert p_mul(W, tau) == p_add([1], p_esc(0x4, G_POLY))
+assert A == [0x3, 0x5] and B == [0xd]
+assert p_add(p_mul(tau, A), B) == G_POLY
+assert sig49 == [0x5, 0xe, 0x2]
+assert raices(sig49) == [10, 13]
+q1, r1 = p_divmod(sig49, [0xa, 1])
+q2, r2 = p_divmod(sig49, [0xd, 1])
+assert r1 == [0] and r2 == [0] and p_add(q1, q2) == [0xe]
+assert p_mul(sig49, [0x4, 0x9]) == p_add([0xe], p_mul([0xe, 1], G_POLY))
+print(f"   R = S^-1 = {p_hex(R)}        [certificado: S*R = 1 + (z+z^3)*g]")
+print(f"   x + R = {p_hex(p_add(R, [0,1]))}")
+print(f"   W = raiz(x+R) = {p_hex(W)}   [certificado: W^2 = (x+R) + (z+z^2)*g]")
+print(f"   tau = W^-1 = {p_hex(tau)}    [certificado: W*tau = 1 + z^2*g]")
+print(f"   g = tau*A + B con A = {p_hex(A)}, B = {p_hex(B)}  (division exacta)")
+print(f"   sigma = A^2 + x*B^2 = {p_hex(sig49)}")
+print(f"   raices de sigma: {raices(sig49)} = posiciones del error")
+print(f"   sigma' = e (0xe) y sigma*S = sigma' + (x+e)*g  [OK]")
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("5. Identidad de van Lint: Gamma2(L,g) = Gamma2(L,g^2)")
+
+def nucleo(H):
+    nr = len(H)
+    colmask = [sum(H[r][j] << r for r in range(nr)) for j in range(N)]
+    tabL, tabH = [0] * 256, [0] * 256
+    for b in range(256):
+        sL = sH = 0
+        for j in range(8):
+            if (b >> j) & 1:
+                sL ^= colmask[j]
+                sH ^= colmask[8 + j]
+        tabL[b], tabH[b] = sL, sH
+    return frozenset(w for w in range(1 << N)
+                     if tabL[w & 255] ^ tabH[w >> 8] == 0)
+
+H4 = []
+g2inv = [inv(mul(p_eval(G_POLY, a), p_eval(G_POLY, a))) for a in ALPHA]
+for i in range(4):
+    for l in range(4):
+        H4.append([(mul(1 if i == 0 else pw(ALPHA[j], i), g2inv[j]) >> l) & 1
+                   for j in range(N)])
+C1, C2 = nucleo(HHAT), nucleo(H4)
+assert len(C1) == len(C2) == 256 and C1 == C2
+print(f"   |nucleo(H~)| = {len(C1)},  |nucleo(4 filas a^i/g^2)| = {len(C2)}")
+print("   las 65536 palabras: coinciden palabra a palabra  [OK]  (y son 256)")
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("6. Correccion: los 120 errores de peso 2 y los 137 sindromes")
+ok = 0
+for i in range(N):
+    for j in range(i + 1, N):
+        w = [0] * N
+        w[i] = w[j] = 1
+        if raices(patterson(syndrome(w))) == [i, j]:
+            ok += 1
+assert ok == 120
+print(f"   Patterson corrige {ok}/120 errores de peso 2  [OK]")
+sind = {0}
+for j in range(N):
+    sind.add((COLS[j][0] << 4) | COLS[j][1])
+for i in range(N):
+    for j in range(i + 1, N):
+        sind.add((COLS[i][0] ^ COLS[j][0]) << 4 | (COLS[i][1] ^ COLS[j][1]))
+assert len(sind) == 1 + 16 + 120 == 137
+print(f"   de los 2^8 = 256 sindromes, alcanzables con peso <= 2: {len(sind)}"
+      "  (1 + 16 + 120)  [OK]")
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("7. McEliece 1978 en miniatura (capitulo 5): G' = S*G*P")
+
+def mmul(A, B):
+    return [[sum(A[i][k] * B[k][j] for k in range(len(B))) % 2
+             for j in range(len(B[0]))] for i in range(len(A))]
+
+def perm_pull(M, perm):                    # (M P)[i][j] = M[i][perm[j]]
+    return [[row[perm[j]] for j in range(len(row))] for row in M]
+
+def inv_f2(M):
+    n = len(M)
+    A = [row[:] + [1 if i == j else 0 for j in range(n)]
+         for i, row in enumerate(M)]
+    for c in range(n):
+        piv = next(r for r in range(c, n) if A[r][c])
+        A[c], A[piv] = A[piv], A[c]
+        for r in range(n):
+            if r != c and A[r][c]:
+                A[r] = [x ^ y for x, y in zip(A[r], A[c])]
+    return [row[n:] for row in A]
+
+S8 = [[int(b) for b in row] for row in
+      ("01101010", "10010001", "01010001", "01010110",
+       "01110110", "00111110", "10011100", "00010101")]
+SIG = [14, 2, 7, 10, 4, 8, 12, 6, 9, 15, 11, 5, 0, 3, 13, 1]
+SIGINV = [SIG.index(j) for j in range(N)]
+Gm = [[int(b) for b in row] for row in EXPECT_G]
+GP = mmul(S8, perm_pull(Gm, SIG))
+GP_fig = ["1111001110010101", "0000110101111001", "0010000011101001",
+          "1000100010100011", "1101000010110010", "1001001000110111",
+          "0000011100111110", "0100100101110111"]
+for i, row in enumerate(GP):
+    txt = sbits(vbits(row), 16)
+    assert txt == GP_fig[i], f"G' fila {i} != figura"
+print("   G' = S*G*P reproduce la figura del libro  [OK]")
+
+u = [int(c) for c in "01001101"]
+z = [int(c) for c in "0001000000001000"]
+uGP = [sum(u[i] * GP[i][j] for i in range(8)) % 2 for j in range(N)]
+assert sbits(vbits(uGP), 16) == "0000011010001011"
+x = [a ^ b for a, b in zip(uGP, z)]
+assert sbits(vbits(x), 16) == "0001011010000011"
+xPinv = [x[SIGINV[j]] for j in range(N)]
+zPinv = [z[SIGINV[j]] for j in range(N)]
+assert sbits(vbits(xPinv), 16) == "0100000011101100"
+assert sbits(vbits(zPinv), 16) == "1000000000100000"
+c = [a ^ b for a, b in zip(xPinv, zPinv)]
+assert sbits(vbits(c), 16) == "1100000011001100"
+print(f"   u = {sbits(vbits(u), 8)}  (4 unos)   z = {sbits(vbits(z), 16)}")
+print(f"   x = u*G' + z = {sbits(vbits(x), 16)}")
+print(f"   x*P^-1 = {sbits(vbits(xPinv), 16)}   z*P^-1 = {sbits(vbits(zPinv), 16)}")
+print(f"   c = x*P^-1 + z*P^-1 = {sbits(vbits(c), 16)}")
+S_x = syndrome(xPinv)
+assert S_x == [0x2, 0x3]                   # S(x) = 2 + 3x
+sig = patterson(S_x)
+assert sig == [0, 0xc, 0xf]                # c x + f x^2
+r = raices(sig)
+assert r == [0, 10]
+print(f"   sindrome: {p_hex(S_x)};  sigma = {p_hex(sig)} (multiplo escalar del localizador)")
+print(f"   raices: {r} -> z' recuperado = {sbits(vbits(zPinv), 16)}  [OK]")
+uS = c[8:]
+u_rec = [sum(uS[i] * inv_f2(S8)[i][k] for i in range(8)) % 2 for k in range(8)]
+assert sbits(vbits(uS), 8) == "11001100"
+assert u_rec == u
+print(f"   u*S = {sbits(vbits(uS), 8)};  u = (u*S)*S^-1 = {sbits(vbits(u_rec), 8)}"
+      "  -> mensaje recuperado  [OK]")
+
+# ----------------------------------------------------------------------
+print()
+print("=" * 70)
+print("8. KEM del juguete (capitulo 11)")
+
+DELTA = bytes([0x5a]) * 32
+flujo = shake_256(bytes([0x40]) + DELTA).digest(8)   # etiqueta 64 = 0x40
+s_val = flujo[0] | (flujo[1] << 8)
+assert s_val == 0xCBAE
+s_str = sbits(s_val, 16)
+print(f"   delta = 5a repetido 32 veces")
+print(f"   s = {s_str[:4]} {s_str[4:8]} {s_str[8:12]} {s_str[12:]}"
+      f" = {s_val:04x}  (bytes AE CB, little-endian)")
+
+e_hi, e_lo = 0x24, 0x00                    # e = 0x2400: posiciones 10 y 13
+C_bits = [(e_lo >> r) & 1 ^
+          sum(T[r][j] * ((e_hi >> j) & 1) for j in range(8)) % 2
+          for r in range(8)]
+C_val = vbits(C_bits)
+assert C_val == 0x98
+print(f"   e = 0000000000100100 (posiciones 10 y 13)")
+print(f"   C = e_alto + T*(e_bajo) = col2(T) + col5(T) = 36 ^ AE = {C_val:02x}"
+      f" = {sbits(C_val, 8)}")
+
+K = shake_256(bytes([0x01]) + bytes([e_lo, e_hi]) + bytes([C_val])).digest(32)
+assert K.hex() == \
+    "597f46fbba325c68f0b0b45c6ea984961461eb220d1f24024ed888912b336278"
+print(f"   K  = SHAKE256(01|00 24|98) = {K.hex()}")
+
+v = [(C_val >> r) & 1 for r in range(8)] + [0] * 8
+S_v = syndrome(v)
+assert S_v == [0x4, 0x9]
+sig_v = patterson(S_v)
+assert sig_v == [0x5, 0xe, 0x2]
+r_v = raices(sig_v)
+assert r_v == [10, 13]
+e_dec = [0] * N
+for p in r_v:
+    e_dec[p] = 1
+assert e_dec == e2
+K2 = shake_256(bytes([0x01]) + bytes([e_lo, e_hi]) + bytes([C_val])).digest(32)
+assert K2 == K
+print(f"   decap: v = (C, 0); S(v) = {p_hex(S_v)}; sigma = {p_hex(sig_v)}")
+print(f"   raices {r_v} -> e correcto;  K' = K  [OK]")
+
+C_t = 0x99
+v_t = [(C_t >> r) & 1 for r in range(8)] + [0] * 8
+S_t = syndrome(v_t)
+sig_t = patterson(S_t)
+assert raices(sig_t) == []
+K2t = shake_256(bytes([0x00]) + bytes([flujo[0], flujo[1]]) + bytes([C_t])).digest(32)
+assert K2t.hex() == \
+    "ba1a72ac26b0fcf20c55c108bb681e27aa9c270c60802a821601130b7f1e1494"
+print(f"   C~ = C+1 = {sbits(C_t, 8)}: S~ = {p_hex(S_t)}, sigma~ = {p_hex(sig_t)},"
+      " sin raices")
+print(f"   K'' = SHAKE256(00|AE CB|99) = {K2t.hex()}  (rechazo)")
+
+print()
+print("=" * 70)
+print("TODAS LAS COMPROBACIONES OK")
+\end{lstlisting}
+
+\section{La salida}
+
+La salida siguiente es la de una ejecución real (octubre de 2026),
+sin más recorte que los espacios en blanco finales de línea:
+
+\begin{lstlisting}[numbers=none]
+======================================================================
+0. GF(16) = F2[z]/(z^4+z+1);  1/g y a/g se calculan en GF(16).
+   Potencias de z: z^0=1 z^1=2 z^2=4 z^3=8 z^4=3 z^5=6 z^6=c z^7=b z^8=5 z^9=a z^10=7 z^11=e z^12=f z^13=d z^14=9
+
+======================================================================
+1. Las 16 columnas de H~ (tabla del libro):  (1/g(a_j), a_j/g(a_j))
+   j= 0  a_j=0  g(a_j)=8  (1/g, a/g)=(f,0)
+   j= 1  a_j=1  g(a_j)=8  (1/g, a/g)=(f,f)
+   j= 2  a_j=2  g(a_j)=e  (1/g, a/g)=(3,6)
+   j= 3  a_j=3  g(a_j)=e  (1/g, a/g)=(3,5)
+   j= 4  a_j=4  g(a_j)=f  (1/g, a/g)=(8,6)
+   j= 5  a_j=5  g(a_j)=f  (1/g, a/g)=(8,e)
+   j= 6  a_j=6  g(a_j)=9  (1/g, a/g)=(2,c)
+   j= 7  a_j=7  g(a_j)=9  (1/g, a/g)=(2,e)
+   j= 8  a_j=8  g(a_j)=c  (1/g, a/g)=(a,f)
+   j= 9  a_j=9  g(a_j)=c  (1/g, a/g)=(a,5)
+   j=10  a_j=a  g(a_j)=a  (1/g, a/g)=(c,1)
+   j=11  a_j=b  g(a_j)=a  (1/g, a/g)=(c,d)
+   j=12  a_j=c  g(a_j)=b  (1/g, a/g)=(5,9)
+   j=13  a_j=d  g(a_j)=b  (1/g, a/g)=(5,c)
+   j=14  a_j=e  g(a_j)=d  (1/g, a/g)=(4,d)
+   j=15  a_j=f  g(a_j)=d  (1/g, a/g)=(4,9)
+
+======================================================================
+2. Forma sistematica: filas de G = (T^t | I8)  [T unica]
+   G_0 = 1100010110000000
+   G_1 = 1100101001000000
+   G_2 = 0110110000100000
+   G_3 = 1001110000010000
+   G_4 = 1011101000001000
+   G_5 = 0111010100000100
+   G_6 = 0110101100000010
+   G_7 = 1001011100000001
+   columnas de T (hex): a3 53 36 39 5d ae d6 e9
+
+======================================================================
+3. Sindrome del error e = posiciones {10, 13}
+   H~ e = (s0, s1) = (9, d)
+   S(x) = s0*x + (s0+s1) = 4+9x   con S_e = [4, 9]
+
+======================================================================
+4. Patterson paso a paso para S(x) = 4 + 9x (con certificados)
+   R = S^-1 = a+7x        [certificado: S*R = 1 + (z+z^3)*g]
+   x + R = a+6x
+   W = raiz(x+R) = c+7x   [certificado: W^2 = (x+R) + (z+z^2)*g]
+   tau = W^-1 = 3+bx    [certificado: W*tau = 1 + z^2*g]
+   g = tau*A + B con A = 3+5x, B = d  (division exacta)
+   sigma = A^2 + x*B^2 = 5+ex+2x^2
+   raices de sigma: [10, 13] = posiciones del error
+   sigma' = e (0xe) y sigma*S = sigma' + (x+e)*g  [OK]
+
+======================================================================
+5. Identidad de van Lint: Gamma2(L,g) = Gamma2(L,g^2)
+   |nucleo(H~)| = 256,  |nucleo(4 filas a^i/g^2)| = 256
+   las 65536 palabras: coinciden palabra a palabra  [OK]  (y son 256)
+
+======================================================================
+6. Correccion: los 120 errores de peso 2 y los 137 sindromes
+   Patterson corrige 120/120 errores de peso 2  [OK]
+   de los 2^8 = 256 sindromes, alcanzables con peso <= 2: 137  (1 + 16 + 120)  [OK]
+
+======================================================================
+7. McEliece 1978 en miniatura (capitulo 5): G' = S*G*P
+   G' = S*G*P reproduce la figura del libro  [OK]
+   u = 01001101  (4 unos)   z = 0001000000001000
+   x = u*G' + z = 0001011010000011
+   x*P^-1 = 0100000011101100   z*P^-1 = 1000000000100000
+   c = x*P^-1 + z*P^-1 = 1100000011001100
+   sindrome: 2+3x;  sigma = cx+fx^2 (multiplo escalar del localizador)
+   raices: [0, 10] -> z' recuperado = 1000000000100000  [OK]
+   u*S = 11001100;  u = (u*S)*S^-1 = 01001101  -> mensaje recuperado  [OK]
+
+======================================================================
+8. KEM del juguete (capitulo 11)
+   delta = 5a repetido 32 veces
+   s = 0111 0101 1101 0011 = cbae  (bytes AE CB, little-endian)
+   e = 0000000000100100 (posiciones 10 y 13)
+   C = e_alto + T*(e_bajo) = col2(T) + col5(T) = 36 ^ AE = 98 = 00011001
+   K  = SHAKE256(01|00 24|98) = 597f46fbba325c68f0b0b45c6ea984961461eb220d1f24024ed888912b336278
+   decap: v = (C, 0); S(v) = 4+9x; sigma = 5+ex+2x^2
+   raices [10, 13] -> e correcto;  K' = K  [OK]
+   C~ = C+1 = 10011001: S~ = b+6x, sigma~ = 5+8x+ax^2, sin raices
+   K'' = SHAKE256(00|AE CB|99) = ba1a72ac26b0fcf20c55c108bb681e27aa9c270c60802a821601130b7f1e1494  (rechazo)
+
+======================================================================
+TODAS LAS COMPROBACIONES OK
+\end{lstlisting}
+
+\section{Simplificaciones del juguete}
+
+El juguete no implementa la especificación real: la ilustra. Sus
+diferencias con Classic McEliece, todas deliberadas:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \textbf{El error es fijo.} \textsf{FixedWeight} devuelve
+        siempre el error de soporte $\{10,13\}$: alcanza para
+        verificar la tubería, pero la especificación lo sortea
+        uniformemente entre las $\binom{n}{t}$ posibilidades
+        (proposición~\ref{prop:fixedweight-uniform}).
+  \item \textbf{No hay semillas, ni reintentos, ni variantes.} El
+        soporte, $g$ y $\sigma$ están fijados a mano: no aparecen
+        $\sigma_1$ y $\sigma_2$, ni la forma semi-sistemática
+        $(\mu,\nu)=(32,64)$, ni la red de Benes que comprime
+        $\alpha$ en la clave secreta (todo el
+        capítulo~\ref{ch:keygen}); tampoco las variantes
+        \texttt{f}, \texttt{pc} y \texttt{pcf}
+        (capítulo~\ref{ch:parametros}).
+  \item \textbf{La seguridad es nula.} Con $n=16$, enumerar las
+        $2^{16}$ palabras es un parpadeo: el juguete verifica la
+        corrección, nunca la dificultad. El problema «duro» empieza
+        en los capítulos~\ref{ch:isd} y~\ref{ch:estructura}.
+  \item \textbf{Las etiquetas del hash sí son las de la
+        especificación}: \texttt{0x40} para el generador
+        $G(\delta)$, \texttt{0x01} y \texttt{0x00} para las dos
+        ramas de la clave de sesión (capítulo~\ref{ch:labkem}), con
+        la convención de bits LSB-primero y bytes little-endian de
+        la sección~6.2 de~\cite{cmspec}.
+\end{itemize}
+
+\medskip
+\noindent Para las cuentas a mano, el apéndice~\ref{app:gf16} tiene
+las tablas de $\FF4$ en formato de bolsillo.

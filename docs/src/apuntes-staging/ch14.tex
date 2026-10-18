@@ -1,0 +1,515 @@
+\chapter{Decodificación por conjuntos de información}\label{ch:isd}
+
+\begin{roadmap}
+El lema~\ref{lem:seg-ow-sd} del capítulo anterior redujo el objetivo
+principal de un atacante ---recuperar la semilla $e$--- al problema
+SD sobre la clave pública. Este capítulo mide ese problema. La
+familia dominante de ataques son los \emph{decodificadores por
+conjuntos de información}: de Prange (1962) a May--Ozerov (2015),
+sesenta años de mejoras combinatorias que han bajado el exponente de
+$2^{173{,}4}$ a $2^{140{,}8}$ para \texttt{mceliece348864}. Veremos la
+idea de cada algoritmo, la tabla de costes de la guía de seguridad
+(2022) y, con lupa, el debate que la rodea: qué cuenta un $2^b$, qué
+papel juega la memoria y qué significa exactamente ``la mitad'' en el
+modelo cuántico. Es el material con el que se asignan las categorías
+de seguridad de la tabla~\ref{tab:param-seguridad}.
+\end{roadmap}
+
+\section{La idea: un conjunto de información}
+
+Recordemos el montaje exacto. La clave pública de Classic McEliece es
+$\mathrm{pk}=\Tmat$ con $\Hmat=(\mathrm{I}_{mt}\,|\,\Tmat)$, el
+criptograma es $C=\Hmat e$ y el objetivo es hallar $e$ de peso $t$
+(lema~\ref{lem:seg-ow-sd}). Todos los ataques de este capítulo tratan
+$\Tmat$ ---o su matriz generadora equivalente--- como una matriz
+\emph{sin estructura}, como si fuese aleatoria. Esa apuesta da a los
+algoritmos su enorme generalidad: si mañana alguien encuentra una
+grieta en las matrices de Goppa concretas (capítulo~\ref{ch:estructura}),
+estos ataques no se dan por enterados; su coste depende solo de
+$n$, $k$ y $t$.
+
+El algoritmo más viejo sigue siendo el más fácil de contar, y data de
+1962~\cite{prange1962}. En la forma del McEliece de 1978 ---clave
+pública $G$ de $k\times n$, texto cifrado $y=Ga+e$--- funciona así:
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+  \item se eligen $k$ columnas de $G$ al azar ---el
+        \emph{conjunto de información}--- y se comprueba que formen
+        una matriz invertible $G_I$;
+  \item se calcula $a=G_I^{-1}y_I$. Si los $t$ errores de $e$
+        cayeran \emph{todos} fuera de $I$, esta $a$ es la buena;
+  \item se verifica: si $y-Ga$ tiene peso $t$, el ataque termina.
+\end{enumerate}
+
+La figura~\ref{fig:isd-prange} cuenta la aritmética. En cada intento,
+la probabilidad de que las $t$ posiciones del error caigan fuera del
+conjunto de información es
+\[
+  \prod_{i=0}^{t-1}\Bigl(1-\frac{k}{n-i}\Bigr)
+  \;\approx\;\Bigl(1-\frac{k}{n}\Bigr)^{t}
+  \;=\;\Bigl(\frac{n-k}{n}\Bigr)^{t},
+\]
+y cada intento cuesta la eliminación gaussiana de una matriz de
+$k\times k$ ---un orden de $k^{3}$ operaciones--- más la
+verificación. Para \texttt{mceliece348864}, con $k=2720$ y $t=64$:
+\[
+  \Bigl(\frac{3488-2720}{3488}\Bigr)^{64}
+  = (0{,}2202\ldots)^{64}
+  \approx 2^{-139{,}7},
+  \qquad k^{3}\approx 2^{34{,}2},
+\]
+de modo que el coste total ronda
+$2^{139{,}7}\cdot 2^{34}\approx 2^{173}$: ahí está el $173{,}4$ de la
+tabla~\ref{tab:param-seguridad}. Prange, con dos multiplicaciones y
+una eliminación gaussiana, fija la vara de medir de todo lo que sigue.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    lbl/.style={font=\scriptsize,align=center},
+    lblb/.style={font=\footnotesize,align=center}
+  ]
+  % franja de columnas
+  \fill[mcsky!45,rounded corners=2pt] (0,-0.32) rectangle (11.7,0.32);
+  \fill[mcgreen2!60,rounded corners=2pt] (11.7,-0.32) rectangle (15.0,0.32);
+  \draw[mcblue,thick,rounded corners=2pt] (0,-0.32) rectangle (11.7,0.32);
+  \draw[mcgreen,thick,rounded corners=2pt] (11.7,-0.32) rectangle (15.0,0.32);
+  % errores (aspas) fuera del conjunto de informacion
+  \foreach \x in {11.95,12.23,12.51,12.79,13.07,13.35,13.63,13.91,14.19,14.47}
+    \draw[mcred,thick] (\x-0.1,-0.1) -- (\x+0.1,0.1)
+      (\x-0.1,0.1) -- (\x+0.1,-0.1);
+  % etiquetas de la franja
+  \node[lbl] at (5.85,0.78)
+    {$k=2720$ columnas: el conjunto de información (se resuelve $a$)};
+  \node[lbl] at (13.35,0.78)
+    {$n-k=mt=768$};
+  \node[lbl] at (4.4,-0.82)
+    {si alguna $\times$ cayera aquí,\\ el intento falla};
+  \node[lbl,mcred,text width=6.4cm,align=flush center] at (11.2,-0.98)
+    {las $t=64$ posiciones del error, todas fuera del conjunto:
+     éxito con probabilidad $\approx 0{,}22^{64}\approx 2^{-139{,}7}$};
+  % formulas abajo
+  \node[lblb] (f1) at (3.4,-2.15)
+    {un intento: eliminación $k\times k$\\ $\approx k^{3}\approx 2^{34}$};
+  \node[lblb] (f2) at (11.4,-2.15)
+    {coste total del ataque:\\ $2^{139{,}7}\cdot2^{34}\approx 2^{173{,}4}$};
+  \draw[-{Stealth[length=2.2mm]},thick,mcgray] (f1.east) -- (f2.west);
+  \draw[-{Stealth[length=2.2mm]},thick,mcgray] (7.6,-1.2) -- (7.6,-1.75);
+\end{tikzpicture}
+\caption{Prange (1962): elegir $k$ columnas, resolver el sistema y
+repetir hasta que el azar deje el error fuera del conjunto de
+información. Los números son los de \texttt{mceliece348864}
+($n=3488$, $k=2720$, $t=64$) y reproducen el $2^{173{,}4}$ de la
+guía de seguridad~\cite{cmsecurity}.}
+\label{fig:isd-prange}
+\end{figure}
+
+\begin{historia}[1962 y 1978: el ataque ya tenía dieciséis años]
+Prange publicó su decodificación por conjuntos de información en
+1962, dieciséis años antes de que McEliece propusiera usar SD como
+candado~\cite{prange1962,mceliece1978}. La consecuencia es una virtud
+didáctica poco común: cuando McEliece presentó su esquema, el mejor
+ataque genérico ya existía y estaba estudiado, y todo lo que la
+comunidad ha hecho desde entonces ha sido \emph{afilar} ese ataque.
+Cada mejora ---Stern 1988, Dumer 1991, ball-collision 2011,
+BJMM 2012, May--Ozerov 2015--- es una página de esa historia, y las
+páginas que siguen las recorren en orden.
+\end{historia}
+
+\section{Sesenta años de mejoras}
+
+Las mejoras a Prange se entienden mejor como ataques a la condición
+«hay que acertar que \emph{ningún} error cae en el conjunto de
+información», que es carísima. Todas aflojan esa condición de una
+manera u otra:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \textbf{Lee--Brickell (1988) y Leon (1988).}
+        En vez de exigir cero errores en las $k$ columnas elegidas,
+        se toleran unos pocos: se resuelve el sistema con un pequeño
+        conjunto de posiciones presuntamente erróneas y se busca que
+        el vector residual tenga el peso correcto~\cite{lee1988,leon1988}.
+  \item \textbf{Stern (1988/89): cruzar listas.} El ataque se
+        convierte en una búsqueda de tipo \emph{meet-in-the-middle}:
+        se parte el conjunto de información en dos mitades, se
+        enumeran errores parciales en cada una y se cruzan las listas
+        por su síndrome en una ventana fija
+        (figura~\ref{fig:isd-stern})~\cite{stern1989}. El cruce de
+        dos listas de tamaño $L$ cuesta del orden de $2L$
+        operaciones \emph{por iteración}, y a cambio la probabilidad de
+        éxito por iteración sube muchísimo.
+  \item \textbf{Dumer (1991).} Reutiliza las listas de Stern entre
+        permutaciones en lugar de recomputarlas: mismo coste, menos
+        trabajo por intento~\cite{dumer1991}.
+  \item \textbf{Ball-collision (2011).} Bernstein, Lange y Peters
+        convierten el cruce de listas en un problema de colisiones
+        de bolas con radios optimizables~\cite{blp2011}.
+  \item \textbf{Representaciones: MMT (2011) y BJMM (2012).} La
+        idea ``$1+1=0$'': hay muchas maneras de descomponer un error
+        en suma de vectores parciales, y se puede pedir que las
+        listas contengan solo \emph{representantes}, reduciendo su
+        tamaño sin perder soluciones~\cite{mmt2011,bjmm2012}.
+  \item \textbf{May--Ozerov (2015).} Sustituye el cruce exacto de
+        listas por la búsqueda eficiente de \emph{vecinos cercanos}
+        en métrica de Hamming, con las estructuras de datos de
+        Indyk--Motwani; es la mejora que fija los mejores números de
+        la tabla~\ref{tab:isd-guia}~\cite{mo2015}.
+  \item \textbf{Both--May (2018).} Afina el régimen de tasas de
+        error altas y las estructuras de vecinos cercanos; su
+        variante con peso parcialmente disjunto es una de las
+        columnas de la tabla~\ref{tab:isd-guia}~\cite{bothmay2018}.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    st/.style={draw=mcblue,fill=mcsky!40,rounded corners=3pt,align=center,
+      font=\scriptsize,inner sep=4pt,text width=2.6cm,minimum height=1.05cm},
+    st2/.style={st,draw=mcgreen,fill=mcgreen2!45},
+    st3/.style={st,draw=mcorange,fill=mcorange2!45},
+    arr/.style={-{Stealth[length=2.2mm]},thick,mcgray}
+  ]
+  \node[st] (p) at (0,0) {se permutan las columnas; el conjunto de
+    información se parte en mitades $k_1+k_2$};
+  \node[st2] (l) at (3.9,0) {listas $L_1$, $L_2$: errores parciales de
+    cada mitad con el mismo síndrome parcial};
+  \node[st3] (v) at (7.8,0) {cruce en una ventana: coincidencia de
+    $\ell$ bits fijos};
+  \node[st] (c) at (11.6,0) {candidato $e$ de peso $t$; si no, nueva
+    permutación};
+  \draw[arr] (p) -- (l);
+  \draw[arr] (l) -- (v);
+  \draw[arr] (v) -- (c);
+  \draw[arr,mcred] (c.south) -- ++(0,-0.7) -| node[below,pos=0.25,
+    font=\tiny,color=mcred]{siguiente iteración} (p.south);
+\end{tikzpicture}
+\caption{La idea de Stern y de toda la familia moderna: en vez de
+exigir un conjunto de información perfecto, enumerar errores
+parciales en dos listas y cruzarlas. Las mejoras de 1991--2018
+refinan cada caja: cómo se construyen las listas, cómo se cruzan y
+qué se reutiliza entre permutaciones.}
+\label{fig:isd-stern}
+\end{figure}
+
+\begin{practica}[Reproducir la tabla en una tarde]
+El estimador que produce todos los números de este capítulo es
+público: el \emph{syndrome decoding estimator} de Esser y Bellini,
+publicado en PKC 2022~\cite{esserbellini2022} y disponible (con un
+sucesor más amplio) en el repositorio
+\texttt{Crypto-TII/syndrome\_decoding\_estimator}. Con él y los
+parámetros $(n,k,w)=(3488,2720,64)$ ---y análogos para los otros
+cuatro conjuntos--- se reproducen la tabla~\ref{tab:isd-guia} y sus
+variantes de memoria. Es la mejor forma de comprobar que estos
+números son \emph{cotas del mejor algoritmo conocido}, no teoremas:
+viven en una herramienta, con fecha y versión.
+\end{practica}
+
+\section{Los números: memoria libre y memoria con coste}
+
+La tabla~\ref{tab:isd-guia} reproduce la tabla principal de la guía de
+seguridad del equipo~\cite{cmsecurity}: la salida del estimador de
+Esser--Bellini para los cinco conjuntos, con el modelo de
+\emph{memoria libre} (acceso a memoria arbitrariamente grande sin
+coste). La segunda tabla añade los dos modelos con coste de acceso,
+que discutiremos en la sección siguiente.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccccc}
+\toprule
+conjunto & Prange & Stern & Dumer & BC & BJMM & pdw & MO & BM\\
+\midrule
+\texttt{mceliece348864} & 173{,}4 & 151{,}4 & 151{,}4 & 151{,}5 & 141{,}9 & 143{,}4 & \textbf{140{,}8} & 142{,}7\\
+\texttt{mceliece460896} & 216{,}8 & 193{,}3 & 193{,}2 & 193{,}3 & 180{,}8 & 182{,}6 & \textbf{179{,}8} & 182{,}1\\
+\texttt{mceliece6688128} & 295{,}7 & 268{,}0 & 267{,}9 & 268{,}0 & 247{,}3 & 248{,}8 & \textbf{246{,}2} & 249{,}6\\
+\texttt{mceliece6960119} & 296{,}8 & 268{,}4 & 268{,}3 & 268{,}4 & 246{,}6 & 248{,}4 & \textbf{245{,}7} & 249{,}2\\
+\texttt{mceliece8192128} & 334{,}1 & 303{,}2 & 307{,}4 & 303{,}4 & 277{,}7 & 279{,}1 & \textbf{275{,}6} & 281{,}1\\
+\bottomrule
+\end{tabular}
+\caption{El mejor ataque conocido contra cada conjunto (en bits, modelo
+de memoria libre), según el estimador de Esser--Bellini, en la
+tabla~1 de la guía de seguridad~\cite{cmsecurity}. BC: ball-collision
+(Bernstein--Lange--Peters, 2011); pdw: variante de BJMM con peso
+parcialmente disjunto; MO: May--Ozerov, 2015; BM: Both--May, 2018. El
+mínimo de cada fila está en negrita: May--Ozerov gana en los cinco
+conjuntos.}
+\label{tab:isd-guia}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llcccc}
+\toprule
+conjunto & mem & Prange & Stern & BJMM & MO\\
+\midrule
+\multirow{2}{*}{\texttt{mceliece348864}} & $1/3$ & 176{,}7 & 159{,}3 & 159{,}1 & 156{,}4\\
+                                        & $1/2$ & 178{,}3 & 162{,}8 & 162{,}2 & \textbf{158{,}6}\\
+\multirow{2}{*}{\texttt{mceliece460896}} & $1/3$ & 220{,}4 & 201{,}7 & 201{,}6 & 198{,}6\\
+                                        & $1/2$ & 222{,}1 & 205{,}3 & 204{,}8 & \textbf{201{,}0}\\
+\multirow{2}{*}{\texttt{mceliece6688128}} & $1/3$ & 299{,}4 & 279{,}2 & 278{,}9 & 274{,}9\\
+                                         & $1/2$ & 301{,}2 & 283{,}0 & 282{,}3 & \textbf{278{,}2}\\
+\multirow{2}{*}{\texttt{mceliece6960119}} & $1/3$ & 300{,}4 & 280{,}1 & 279{,}4 & 275{,}8\\
+                                         & $1/2$ & 302{,}2 & 283{,}9 & 283{,}3 & \textbf{279{,}2}\\
+\multirow{2}{*}{\texttt{mceliece8192128}} & $1/3$ & 337{,}7 & 316{,}8 & 316{,}3 & 311{,}9\\
+                                         & $1/2$ & 339{,}5 & 320{,}7 & 320{,}0 & \textbf{315{,}6}\\
+\bottomrule
+\end{tabular}
+\caption{Los mismos ataques con \emph{costes de acceso a memoria}
+(modelo $1/3$: coste de raíz cúbica; modelo $1/2$: coste de raíz
+cuadrada), tabla~1 de~\cite{cmsecurity}. Compárese una fila con la
+otra: las mejoras combinatorias valen mucho menos cuando la memoria se
+paga (para \texttt{mceliece348864}, de $173{,}4$ a $158{,}6$ frente a
+de $173{,}4$ a $140{,}8$).}
+\label{tab:isd-mem}
+\end{table}
+
+La figura~\ref{fig:isd-escalera} cuenta la historia de esos números
+para \texttt{mceliece348864} como una escalera. Prange cotiza en
+$2^{173{,}4}$; el primer salto ---Stern y su cruce de listas--- baja
+hasta $2^{151{,}4}$, y treinta años de refinamientos posteriores
+rascan otros $10{,}6$ bits hasta el $2^{140{,}8}$ de May--Ozerov. Con
+la memoria pagada, la escalera se aplana: de $178{,}3$ a $158{,}6$,
+donde las mejoras modernas aportan solo $4$ bits sobre Stern. Leer
+las dos escaleras juntas es leer toda la sección siguiente.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    x=0.23cm,
+    dot/.style={circle,inner sep=1.4pt},
+    lab/.style={font=\scriptsize},
+    labt/.style={font=\tiny}
+  ]
+  % eje
+  \draw[mcgray,thick,-{Stealth[length=2.2mm]}] (-1,0) -- (52,0);
+  \foreach \x/\v in {0/130,10/140,20/150,30/160,40/170,50/180}
+    \draw[mcgray] (\x,-0.15) -- (\x,0.15)
+      node[below,font=\tiny,color=mcgray] {$2^{\v}$};
+  % carril memoria libre (y = 1.3)
+  \node[lab,anchor=east,align=right] at (-1.5,1.3)
+    {memoria libre};
+  \draw[mcsky!80,dashed] (43.4,1.3) -- (10.8,1.3);
+  \fill[mcblue] (43.4,1.3) circle (2pt) node[above,labt]{Prange $173{,}4$};
+  \fill[mcteal] (21.4,1.3) circle (2pt) node[above,labt,yshift=6pt]{Stern $151{,}4$};
+  \fill[mcorange] (11.9,1.3) circle (2pt) node[above right,labt,xshift=3pt]{BJMM $141{,}9$};
+  \fill[mcgreen] (10.8,1.3) circle (2.6pt) node[above left,labt,xshift=-2pt]{MO $140{,}8$};
+  % carril memoria 1/2 (y = -1.3)
+  \node[lab,anchor=east,align=right] at (-1.5,-1.3)
+    {memoria $1/2$};
+  \draw[mcsky!80,dashed] (48.3,-1.3) -- (28.6,-1.3);
+  \fill[mcblue] (48.3,-1.3) circle (2pt) node[below,labt]{Prange $178{,}3$};
+  \fill[mcteal] (32.8,-1.3) circle (2pt) node[below right,labt]{Stern $162{,}8$};
+  \fill[mcorange] (32.2,-1.3) circle (1.4pt);
+  \fill[mcgreen] (28.6,-1.3) circle (2.6pt) node[below left,labt,xshift=2pt]{MO $158{,}6$};
+  % anotaciones de salto
+  \draw[{Stealth[length=1.8mm]}-{Stealth[length=1.8mm]},mcred,thick]
+    (43.4,-2.3) -- (10.8,-2.3)
+    node[midway,below,labt,color=mcred]
+      {$32{,}6$ bits de mejora total};
+  \draw[{Stealth[length=1.8mm]}-{Stealth[length=1.8mm]},mcgreen,thick]
+    (21.4,-2.85) -- (10.8,-2.85)
+    node[midway,below,labt,color=mcgreen]
+      {solo $10{,}6$ bits desde Stern};
+\end{tikzpicture}
+\caption{La escalera de los ataques contra \texttt{mceliece348864}: de
+Prange (1962) al mejor ataque de 2022, con memoria libre (arriba) y
+pagando la memoria con raíz cuadrada (abajo). El primer salto ---el
+cruce de listas de Stern--- es el grande; el resto es afinar. BJMM
+aparece en ambos carriles para mostrar el aplanamiento: $141{,}9$ con
+memoria libre se convierte en $162{,}2$ pagándola.}
+\label{fig:isd-escalera}
+\end{figure}
+
+\section{Lo que las mejoras no cambian}
+
+Hay una manera engañosa y una manera honesta de contar estas siete
+décadas de ataques, y la guía de seguridad las separa con cuidado.
+La manera asintótica: si $k= Rn$ con $0<R<1$ y $t$ crece despacio
+(como en McEliece, $t\approx n/\log_2 n$), el coste de Prange es
+\[
+  \Bigl(\frac{1}{1-R}+o(1)\Bigr)^{t},
+\]
+y ---esto es lo notable--- \emph{ninguna} de las mejoras desde 1962
+ha cambiado el término principal: solo el $o(1)$~\cite{cmsecurity}.
+En el sentido de los exponentes asintóticos, Stern, BJMM y
+May--Ozerov no han hecho mejor que Prange; han reescrito las
+constantes. Cuando se leen artículos que reportan ganancias
+asintóticas, casi siempre están midiendo otro régimen ---valores de
+$t$ del orden de $n$, como media distancia de Gilbert--Varshamov; por
+ejemplo, allí May--Ozerov reportan $O(2^{0{,}0473n})$ frente a
+$O(2^{0{,}0576n})$ de Prange~\cite{mo2015}--- que no es el régimen de
+McEliece.
+
+\begin{rigor}[$o(1)$ no es $0$]
+De $\bigl(1/(1-R)\bigr)^{t}$ no se sigue que «Prange cuesta
+$5^{t}$»: para $R=0{,}8$, Prange cuesta $(5+o(1))^{t}$ y las mejoras
+también, pero reemplazar $o(1)$ por $0$ produce dos afirmaciones
+contradictorias ---que Prange cuesta exactamente $5^{t}$ y que las
+mejoras cuestan exactamente $5^{t}$---, mientras que en los números
+concretos las mejoras reducen el coste de verdad (de $173{,}4$ a
+$140{,}8$ con memoria libre). La resolución es que el $o(1)$ esconde
+factores que a tamaño criptográfico no son pequeños, y que difieren
+entre algoritmos: el análisis concreto \emph{es} el análisis del
+$o(1)$. Por eso la tabla~\ref{tab:isd-guia} se calcula con
+estimadores, no con teoremas: los exponentes asintóticos dicen qué
+problema es difícil; los estimadores dicen cuánto cuesta hoy.
+\end{rigor}
+
+\begin{observacion}{¿Por qué $n=4608$ no es sospechosamente corto?}{isd-acortamiento}
+El conjunto \texttt{mceliece460896} usa $n=4608$ mientras que su
+cuerpo tiene $8192$ elementos: $n<q$, por debajo del $n=q$ original
+de 1978. La duda ---¿y si el caso corto fuera más fácil?--- la
+resuelve una reducción de acortamiento: cualquier ataque contra
+$(q,n,t)$, con $n\le q$, se transporta a un ataque contra
+$(q,q,t)$ ---el sistema original, con cuarenta años de estudio--- y
+su probabilidad de éxito se multiplica exactamente por
+$\binom{n}{t}/\binom{q}{t}$. Para $(4608,96)$ y $(8192,96)$, la
+pérdida de seguridad de este traslado es de $0{,}8$ bits en el
+modelo $1/2$: analizar el sistema original de McEliece es, a efectos
+prácticos, tan exigente como analizar el acortado. La reducción
+completa está en la sección~4.1 de~\cite{cmsecurity}.
+\end{observacion}
+
+\section{El debate metodológico: qué cuenta un $2^b$}
+
+La tabla~\ref{tab:isd-mem} introduce el matiz más importante de toda
+la parte: \emph{el modelo de memoria cambia las conclusiones}. Los
+modelos oficiales del estimador son tres~\cite{esserbellini2022}:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \textbf{mem $=0$: memoria libre.} Los accesos a memoria
+        arbitrariamente grande no cuestan. Es el modelo de la
+        tabla~\ref{tab:isd-guia}; la propia guía lo llama
+        «físicamente implausible»~\cite{cmsecurity}.
+  \item \textbf{mem $=1/3$ y $1/2$: costes de raíz cúbica y raíz
+        cuadrada.} Cada modelo asigna al acceso a memoria un coste
+        plausible en función de su tamaño. En estos modelos, las
+        mejoras modernas valen mucho menos: «la mayor parte de la
+        aceleración que reivindican estos algoritmos a tamaño
+        criptográfico depende de asignar costes irrealmente bajos a
+        los accesos a memoria»~\cite{cmsecurity}.
+\end{itemize}
+
+El segundo matiz es la \emph{unidad}. El estimador cuenta cada
+operación vectorial ---un XOR entre vectores de $n$ bits, digamos---
+como una operación: encontrar $C$ colisiones entre dos listas de $L$
+vectores cuesta $2L+C$, «sin importar la longitud del
+vector»~\cite{cmsecurity}. Es una unidad cómoda para comparar
+algoritmos entre sí, pero no es una operación de bits. De ahí la
+paradoja aparente que ya señaló el capítulo~\ref{ch:parametros}: el
+$140{,}8$ de \texttt{mceliece348864} «cae por debajo» del $143$ de
+AES-128 solo si se comparan unidades distintas; en operaciones de
+bits, ese ataque cuenta bastante más de $2^{143}$. Y hay una tercera
+capa de realismo, la única que valida implementaciones: el tiempo
+medido en hardware. La guía lo resume con las dos formas de comparar
+\texttt{mceliece6960119} con AES-256: con memoria libre, «las
+variantes modernas de ISD han reducido el número de operaciones de
+bits considerablemente por debajo de $2^{256}$»; con costes
+realistas, «se espera que este conjunto sea más caro de romper que
+AES-256 pre-cuántico y mucho más caro que AES-256
+post-cuántico»~\cite{cmsecurity}. Por eso las categorías del equipo
+son $1,3,5,5,5$: están calculadas con la memoria pagada.
+
+\begin{trampa}[Comparar el número equivocado con la referencia equivocada]
+Tres errores de lectura, frecuentes incluso en publicaciones. (1)
+Comparar una cifra de memoria libre con las referencias AES: en
+$1/2$, para \texttt{mceliece6960119}, May--Ozerov cuesta $279{,}2$
+bits, por encima de AES-256 ($272$): la «tensión» con la categoría~5
+que algunos artículos señalan nace de comparar $245{,}7$ (libre) con
+$272$. (2) Olvidar que los estimadores subestiman las operaciones de
+bits: la guía espera que los números «sean sustituidos por números
+mayores procedentes de estimadores que cuenten operaciones de
+bits»~\cite{cmsecurity}. (3) Creer que un número bajo implica un
+ataque ejecutable: $2^{140{,}8}$ operaciones vectoriales con memoria
+$2^{86{,}6}$ describen un atacante hipotético con más memoria que
+átomos tiene la Tierra (\texttt{mceliece348864} no llega a ella en
+la práctica; el propio estimador asume acceso perfecto).
+\end{trampa}
+
+\section{Criptoanálisis cuántico}\label{sec:isd-cuantico}
+
+Los ataques de esta sección admiten aceleración cuántica, y el
+resultado es más modesto de lo que la palabra «cuántico» sugiere.
+Grover ---y los paseos cuánticos, su generalización--- ofrece una
+raíz cuadrada: si un ataque requiere $2^{\lambda}$ operaciones
+clásicas, la versión cuántica ronda $2^{\lambda/2}$, pero solo del
+bucle externo, y con sobrecostes grandes en el bucle
+interno~\cite{grover1996,bernstein2010,kachigar2017,kirshanova2018}.
+La propia guía lo formula así: «está claro estructuralmente que los
+ataques cuánticos conocidos producen un efecto menor que en, por
+ejemplo, la búsqueda de claves AES», porque Grover aplicado a la
+decodificación por conjuntos de información sufre un sobrecoste
+mucho mayor en el bucle interior~\cite{cmsecurity}.
+
+Con esa advertencia, el modelo estándar para asignar seguridad
+post-cuántica (el de ISO, capítulo~\ref{ch:parametros}) es simple:
+tomar el mejor ataque clásico sin memoria y partir su exponente.
+Para Stern sin memoria~\cite{cmsecurity}, y con la mitad:
+
+\begin{center}
+\small
+\begin{tabular}{lccccc}
+\toprule
+& \texttt{348864} & \texttt{460896} & \texttt{6688128} & \texttt{6960119} & \texttt{8192128}\\
+\midrule
+clásico (Stern, mem.\ $0$) & $151{,}4$ & $193{,}3$ & $268{,}0$ & $268{,}4$ & $303{,}2$\\
+mitad (modelo cuántico) & $75{,}7$ & $96{,}7$ & $134{,}0$ & $134{,}2$ & $151{,}6$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Dos consecuencias. La primera: en ese modelo pesimista, los dos
+conjuntos pequeños caen por debajo de $2^{128}$, y por eso la guía
+solo recomienda los cuatro mayores para horizontes largos (la
+historia completa, incluida la decisión de ISO de estandarizar la
+familia entera, está en el capítulo~\ref{ch:parametros}). La
+segunda: el mecanismo de rechazo implícito añade una defensa
+independiente. La clave de rechazo $\delta$ tiene $32$ bytes ---$256$
+bits---, y el término correspondiente del teorema QROM
+(teorema~\ref{thm:kem-qrom}) es la raíz de su espacio: un atacante
+cuántico necesitaría del orden de $2^{128}$ consultas al hash solo
+para explotar esa vía~\cite{cmsecurity}. El cuello de botella sigue
+siendo SD, pero el diseño no deja flancos más baratos.
+
+\section{Ejercicios}
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=4pt]
+  \item \textbf{Prange a mano.} Para \texttt{mceliece348864}
+        ($n=3488$, $k=2720$, $t=64$): (a)~calcule el exponente de
+        $\bigl((n-k)/n\bigr)^{t}$ con dos decimales; (b)~estime el
+        coste de una iteración como $k^{3}$ y componga el total;
+        (c)~compare con el $173{,}4$ de la tabla~\ref{tab:isd-guia}
+        y explique el medio bit de diferencia (pista: invertibilidad
+        y constantes de la eliminación).
+  \item \textbf{El primer salto.} La escalera de
+        \texttt{mceliece348864} va de $173{,}4$ (Prange) a $151{,}4$
+        (Stern) y de ahí a $140{,}8$ (May--Ozerov). Calcule cuántos
+        bits y cuántos factores de $2^{20}$ aporta cada salto.
+        ¿Por qué decimos que «el primer salto es el grande»?
+  \item \textbf{La paradoja del $5^{t}$.} Explique con el recuadro
+        de rigor: ¿cómo pueden Prange y May--Ozerov tener el mismo
+        exponente asintótico $(1/(1-R))^{t}$ y, a la vez, costes
+        concretos que difieren en $32{,}6$ bits para
+        \texttt{mceliece348864}?
+  \item \textbf{Las dos referencias.} Con las
+        tablas~\ref{tab:isd-guia} y~\ref{tab:isd-mem}: (a)~¿cuántos
+        bits cuesta pagar la memoria en el mejor ataque de cada
+        modelo para \texttt{mceliece6960119}? (b)~¿Cómo se compara
+        cada cifra con AES-256 ($272$ operaciones de bits) y por qué
+        la categoría del equipo es la~5?
+  \item \textbf{El acortamiento.} Con la
+        observación~\ref{obs:isd-acortamiento}: escriba en cinco
+        líneas por qué saber que $(8192,96)$ es duro «basta» para
+        creer que $(4608,96)$ lo es, y en qué se pierde el $0{,}8$
+        de bit.
+  \item \textbf{Optimismo cuántico.} La tabla cuántica de esta
+        sección parte el exponente de Stern, pero la guía avisa de
+        sobrecostes del bucle interno. Explique por qué la mitad es
+        una \emph{cota optimista} para el atacante, y qué papel
+        juegan en el balance los $256$ bits de la clave de rechazo
+        $\delta$.
+\end{enumerate}

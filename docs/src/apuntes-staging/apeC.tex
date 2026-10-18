@@ -1,0 +1,167 @@
+% ======================================================================
+%  APÉNDICE C — GF(16) DE BOLSILLO
+% ======================================================================
+
+\chapter{GF(16) de bolsillo}\label{app:gf16}
+
+El cuerpo $\FF4=\F_2[z]/(z^4+z+1)$ es el banco de pruebas de todo el
+libro (ejemplo~\ref{ej:gf16} y los laboratorios de los
+capítulos~\ref{ch:labgoppa} y~\ref{ch:labkem}). Este apéndice reúne,
+para consulta rápida, las tablas que los ejercicios y las cuentas a
+mano necesitan: potencias, logaritmos, inversos, raíces cuadradas,
+traza y la tabla de multiplicar completa. Convenio: cada elemento se
+escribe como dígito hexadecimal con el bit $i$-ésimo igual al
+coeficiente de $z^i$ (en particular $z=\mathtt{2}$ y $z^4=z+1$); los
+dígitos hex van en minúsculas, como en el programa del
+apéndice~\ref{app:codigo}.
+
+\section{Potencias y logaritmos}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}clc@{\hspace{3.5em}}clc@{}}
+\toprule
+$i$ & hex & polinomio & $i$ & hex & polinomio\\
+\midrule
+0 & \texttt{1} & $1$ & 8 & \texttt{5} & $1+z^2$\\
+1 & \texttt{2} & $z$ & 9 & \texttt{a} & $z+z^3$\\
+2 & \texttt{4} & $z^2$ & 10 & \texttt{7} & $1+z+z^2$\\
+3 & \texttt{8} & $z^3$ & 11 & \texttt{e} & $z+z^2+z^3$\\
+4 & \texttt{3} & $1+z$ & 12 & \texttt{f} & $1+z+z^2+z^3$\\
+5 & \texttt{6} & $z+z^2$ & 13 & \texttt{d} & $1+z^2+z^3$\\
+6 & \texttt{c} & $z^2+z^3$ & 14 & \texttt{9} & $1+z^3$\\
+7 & \texttt{b} & $1+z+z^3$ &  & &\\
+\bottomrule
+\end{tabular}
+\caption{Las potencias $z^i$, $i=0,\dots,14$: el valor de $z^i$ es el
+dígito hex y su expresión polinómica, la de al lado. El cuerpo tiene
+$15$ elementos no nulos: $z$ es primitivo y su ciclo los agota todos
+(figura~\ref{fig:ciclo-z}).}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}cc@{\hspace{4em}}cc@{}}
+\toprule
+$a$ & $\log_z a$ & $a$ & $\log_z a$\\
+\midrule
+\texttt{1} & \texttt{0} & \texttt{9} & \texttt{e}\\
+\texttt{2} & \texttt{1} & \texttt{a} & \texttt{9}\\
+\texttt{3} & \texttt{4} & \texttt{b} & \texttt{7}\\
+\texttt{4} & \texttt{2} & \texttt{c} & \texttt{6}\\
+\texttt{5} & \texttt{8} & \texttt{d} & \texttt{d}\\
+\texttt{6} & \texttt{5} & \texttt{e} & \texttt{b}\\
+\texttt{7} & \texttt{a} & \texttt{f} & \texttt{c}\\
+\texttt{8} & \texttt{3} & \texttt{0} & ---\\
+\bottomrule
+\end{tabular}
+\caption{Logaritmos en base $z$ (los exponentes, también en hex: por
+ejemplo $\log_z\mathtt{6}=\mathtt{5}$, pues $z^5=z+z^2$, y el $0$ no
+tiene logaritmo). Para multiplicar: $ab=z^{\log a+\log b}$ con el
+exponente módulo $15$.}
+\end{table}
+
+\section{Inversos, cuadrados, raíces y traza}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}cc@{\hspace{4em}}cc@{}}
+\toprule
+$a$ & $a^{-1}$ & $a$ & $a^{-1}$\\
+\midrule
+\texttt{1} & \texttt{1} & \texttt{9} & \texttt{2}\\
+\texttt{2} & \texttt{9} & \texttt{a} & \texttt{c}\\
+\texttt{3} & \texttt{e} & \texttt{b} & \texttt{5}\\
+\texttt{4} & \texttt{d} & \texttt{c} & \texttt{a}\\
+\texttt{5} & \texttt{b} & \texttt{d} & \texttt{4}\\
+\texttt{6} & \texttt{7} & \texttt{e} & \texttt{3}\\
+\texttt{7} & \texttt{6} & \texttt{f} & \texttt{8}\\
+\texttt{8} & \texttt{f} & \texttt{0} & ---\\
+\bottomrule
+\end{tabular}
+\caption{Inversos multiplicativos. Comprobación rápida:
+$\mathtt{3}\cdot\mathtt{e}=z^{4}\cdot z^{11}=z^{15}=1$.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}cccc@{\hspace{3em}}cccc@{}}
+\toprule
+$x$ & $x^2$ & $\sqrt{x}$ & $\Tr(x)$ & $x$ & $x^2$ & $\sqrt{x}$ & $\Tr(x)$\\
+\midrule
+\texttt{0} & \texttt{0} & \texttt{0} & 0 & \texttt{8} & \texttt{c} & \texttt{a} & 1\\
+\texttt{1} & \texttt{1} & \texttt{1} & 0 & \texttt{9} & \texttt{d} & \texttt{b} & 1\\
+\texttt{2} & \texttt{4} & \texttt{5} & 0 & \texttt{a} & \texttt{8} & \texttt{f} & 1\\
+\texttt{3} & \texttt{5} & \texttt{4} & 0 & \texttt{b} & \texttt{9} & \texttt{e} & 1\\
+\texttt{4} & \texttt{3} & \texttt{2} & 0 & \texttt{c} & \texttt{f} & \texttt{8} & 1\\
+\texttt{5} & \texttt{2} & \texttt{3} & 0 & \texttt{d} & \texttt{e} & \texttt{9} & 1\\
+\texttt{6} & \texttt{7} & \texttt{7} & 0 & \texttt{e} & \texttt{b} & \texttt{d} & 1\\
+\texttt{7} & \texttt{6} & \texttt{6} & 0 & \texttt{f} & \texttt{a} & \texttt{c} & 1\\
+\bottomrule
+\end{tabular}
+\caption{Cuadrados, raíces cuadradas ($\sqrt{x}=x^{8}$, la mitad de
+$2^{m-1}$ porque la característica es $2$) y traza absoluta
+($\Tr(x)=x+x^2+x^4+x^8\in\F_2$). Exactamente $8$ elementos tienen
+traza $1$: el núcleo de $\Tr$ es un subespacio de dimensión $3$.}
+\end{table}
+
+\section{La tabla de multiplicar}
+
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{4.2pt}
+\begin{tabular}{@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}}
+\toprule
+$\cdot$ & \texttt{0} & \texttt{1} & \texttt{2} & \texttt{3} & \texttt{4} & \texttt{5} & \texttt{6} & \texttt{7} & \texttt{8} & \texttt{9} & \texttt{a} & \texttt{b} & \texttt{c} & \texttt{d} & \texttt{e} & \texttt{f}\\
+\midrule
+\texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0} & \texttt{0}\\
+\texttt{1} & \texttt{0} & \texttt{1} & \texttt{2} & \texttt{3} & \texttt{4} & \texttt{5} & \texttt{6} & \texttt{7} & \texttt{8} & \texttt{9} & \texttt{a} & \texttt{b} & \texttt{c} & \texttt{d} & \texttt{e} & \texttt{f}\\
+\texttt{2} & \texttt{0} & \texttt{2} & \texttt{4} & \texttt{6} & \texttt{8} & \texttt{a} & \texttt{c} & \texttt{e} & \texttt{3} & \texttt{1} & \texttt{7} & \texttt{5} & \texttt{b} & \texttt{9} & \texttt{f} & \texttt{d}\\
+\texttt{3} & \texttt{0} & \texttt{3} & \texttt{6} & \texttt{5} & \texttt{c} & \texttt{f} & \texttt{a} & \texttt{9} & \texttt{b} & \texttt{8} & \texttt{d} & \texttt{e} & \texttt{7} & \texttt{4} & \texttt{1} & \texttt{2}\\
+\texttt{4} & \texttt{0} & \texttt{4} & \texttt{8} & \texttt{c} & \texttt{3} & \texttt{7} & \texttt{b} & \texttt{f} & \texttt{6} & \texttt{2} & \texttt{e} & \texttt{a} & \texttt{5} & \texttt{1} & \texttt{d} & \texttt{9}\\
+\texttt{5} & \texttt{0} & \texttt{5} & \texttt{a} & \texttt{f} & \texttt{7} & \texttt{2} & \texttt{d} & \texttt{8} & \texttt{e} & \texttt{b} & \texttt{4} & \texttt{1} & \texttt{9} & \texttt{c} & \texttt{3} & \texttt{6}\\
+\texttt{6} & \texttt{0} & \texttt{6} & \texttt{c} & \texttt{a} & \texttt{b} & \texttt{d} & \texttt{7} & \texttt{1} & \texttt{5} & \texttt{3} & \texttt{9} & \texttt{f} & \texttt{e} & \texttt{8} & \texttt{2} & \texttt{4}\\
+\texttt{7} & \texttt{0} & \texttt{7} & \texttt{e} & \texttt{9} & \texttt{f} & \texttt{8} & \texttt{1} & \texttt{6} & \texttt{d} & \texttt{a} & \texttt{3} & \texttt{4} & \texttt{2} & \texttt{5} & \texttt{c} & \texttt{b}\\
+\texttt{8} & \texttt{0} & \texttt{8} & \texttt{3} & \texttt{b} & \texttt{6} & \texttt{e} & \texttt{5} & \texttt{d} & \texttt{c} & \texttt{4} & \texttt{f} & \texttt{7} & \texttt{a} & \texttt{2} & \texttt{9} & \texttt{1}\\
+\texttt{9} & \texttt{0} & \texttt{9} & \texttt{1} & \texttt{8} & \texttt{2} & \texttt{b} & \texttt{3} & \texttt{a} & \texttt{4} & \texttt{d} & \texttt{5} & \texttt{c} & \texttt{6} & \texttt{f} & \texttt{7} & \texttt{e}\\
+\texttt{a} & \texttt{0} & \texttt{a} & \texttt{7} & \texttt{d} & \texttt{e} & \texttt{4} & \texttt{9} & \texttt{3} & \texttt{f} & \texttt{5} & \texttt{8} & \texttt{2} & \texttt{1} & \texttt{b} & \texttt{6} & \texttt{c}\\
+\texttt{b} & \texttt{0} & \texttt{b} & \texttt{5} & \texttt{e} & \texttt{a} & \texttt{1} & \texttt{f} & \texttt{4} & \texttt{7} & \texttt{c} & \texttt{2} & \texttt{9} & \texttt{d} & \texttt{6} & \texttt{8} & \texttt{3}\\
+\texttt{c} & \texttt{0} & \texttt{c} & \texttt{b} & \texttt{7} & \texttt{5} & \texttt{9} & \texttt{e} & \texttt{2} & \texttt{a} & \texttt{6} & \texttt{1} & \texttt{d} & \texttt{f} & \texttt{3} & \texttt{4} & \texttt{8}\\
+\texttt{d} & \texttt{0} & \texttt{d} & \texttt{9} & \texttt{4} & \texttt{1} & \texttt{c} & \texttt{8} & \texttt{5} & \texttt{2} & \texttt{f} & \texttt{b} & \texttt{6} & \texttt{3} & \texttt{e} & \texttt{a} & \texttt{7}\\
+\texttt{e} & \texttt{0} & \texttt{e} & \texttt{f} & \texttt{1} & \texttt{d} & \texttt{3} & \texttt{2} & \texttt{c} & \texttt{9} & \texttt{7} & \texttt{6} & \texttt{8} & \texttt{4} & \texttt{a} & \texttt{b} & \texttt{5}\\
+\texttt{f} & \texttt{0} & \texttt{f} & \texttt{d} & \texttt{2} & \texttt{9} & \texttt{6} & \texttt{4} & \texttt{b} & \texttt{1} & \texttt{e} & \texttt{c} & \texttt{3} & \texttt{8} & \texttt{7} & \texttt{5} & \texttt{a}\\
+\bottomrule
+\end{tabular}
+\caption{Producto $a\cdot b$ en $\FF4$, con $a$ en la fila y $b$ en la
+columna (como en todas las tablas de este apéndice). Cada fila no
+nula es una permutación de $\{1,\dots,\mathtt{f}\}$: la tabla lo
+muestra y la estructura de cuerpo lo garantiza.}
+\end{table}
+
+\section{Cómo usar estas tablas}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item \textbf{Sumar} es XOR sin acarreo, bit a bit:
+        $\mathtt{6}\oplus\mathtt{5}=\mathtt{3}$, es decir
+        $(z+z^2)+(1+z^2)=1+z$.
+  \item \textbf{Multiplicar} pasa por logaritmos:
+        $a\,b=z^{\log_z a+\log_z b \pmod{15}}$. Ejemplo:
+        $\mathtt{6}\cdot\mathtt{5}=z^{5}z^{8}=z^{13}=\mathtt{d}$;
+        la versión polinómica es
+        $(z+z^2)(1+z^2)=1+z^2+z^3$.
+  \item \textbf{Invertir} es cambiar de signo el logaritmo. Con eso,
+        la división es una resta de exponentes, y los
+        $1/g(\alpha_i)$ del capítulo~\ref{ch:labgoppa} se calculan
+        sin escribir una sola división polinómica.
+  \item \textbf{La raíz cuadrada} no necesita algoritmos iterativos:
+        en característica $2$, $\sqrt{x}=x^{2^{m-1}}=x^8$; Patterson
+        la usa constantemente (capítulo~\ref{ch:goppa}).
+  \item \textbf{La traza} decide irreducibilidad y pertenencia a
+        subcuerpos; en el juguete, $\Tr(\beta)=\Tr(\beta^2)$ para
+        todo $\beta$ (ejercicio~\ref{ej:traza-ej}).
+  \item \textbf{Verificación cruzada.} El programa del
+        apéndice~\ref{app:codigo} construye estas mismas tablas en
+        una función de dos líneas y las usa para comprobar, número a
+        número, todas las cuentas de los
+        capítulos~\ref{ch:labgoppa} y~\ref{ch:labkem}.
+\end{itemize}

@@ -1,0 +1,172 @@
+% ======================================================================
+%  APÉNDICE B — CRONOLOGÍA
+% ======================================================================
+
+\chapter{Cronología: de Goppa (1970) a octubre de 2026}\label{app:cronologia}
+
+\begin{roadmap}
+Medio siglo de fechas, en orden: los cimientos (códigos de Goppa,
+decodificación, el criptosistema de 1978), las siete décadas de
+criptoanálisis clásico y cuántico, los procesos de estandarización y,
+con más detalle, el año que cambió el tono (2025--2026). Las
+referencias apuntan a la bibliografía; los hitos de 2026 citan los
+trabajos originales, no las crónicas.
+\end{roadmap}
+
+\vspace{-0.4\baselineskip}
+\begin{longtable}{@{}p{2.6cm}p{12.96cm}@{}}
+\toprule
+fecha & hito\\
+\midrule
+\endfirsthead
+\toprule
+fecha & hito\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\multicolumn{2}{@{}l}{\textit{Fundaciones (1970--1991)}}\\
+\midrule
+1970 & Valeri Goppa introduce los códigos algebraico-geométricos
+  sobre cuerpos finitos que hoy llevan su
+  nombre~\cite{goppa1970}.\\
+1975 & Patterson publica el algoritmo de decodificación que hace
+  utilizables los códigos de Goppa~\cite{patterson1975}.\\
+1978 & Robert J. McEliece propone el primer criptosistema de clave
+  pública basado en códigos~\cite{mceliece1978}; Berlekamp, McEliece
+  y van Tilborg demuestran que la decodificación por síndromes es
+  NP-completa~\cite{bcmv1978}.\\
+1986 & Niederreiter reformula el esquema en forma dual, con vectores
+  de error de peso fijo como
+  mensajes~\cite{niederreiter1986}.\\
+1988 & Primeros ataques por conjuntos de información: Lee--Brickell
+  y Leon toleran unos pocos errores en las $k$ columnas
+  elegidas~\cite{lee1988,leon1988}.\\
+1989 & Stern convierte el ataque en un cruce de listas
+  (\emph{meet-in-the-middle})~\cite{stern1989}.\\
+1991 & Dumer reutiliza y optimiza las listas de
+  Stern~\cite{dumer1991}.\\
+\midrule
+\multicolumn{2}{@{}l}{\textit{La amenaza cuántica y el
+criptoanálisis clásico (1994--2015)}}\\
+\midrule
+1994 & Shor: factorización y logaritmo discreto en tiempo
+  polinómico en un ordenador cuántico~\cite{shor1994}; nace la
+  agenda post-cuántica.\\
+1996 & Grover: búsqueda cuántica con aceleración
+  cuadrática~\cite{grover1996}.\\
+1997 & Berson: ataques de reacción contra
+  McEliece~\cite{berson1997}.\\
+1998 & Canteaut y Sendrier: el ataque por división del
+  soporte~\cite{canteautsendrier1998}.\\
+2000 & Sendrier consolida la división del soporte como la segunda
+  gran familia de criptoanálisis estructural~\cite{sendrier2000}.\\
+2001 & Shoup: ataques de temporización contra la
+  decodificación~\cite{shoup2001}.\\
+2009 & Overbeck y Sendrier publican el panorama del criptoanálisis
+  basado en códigos~\cite{overbeck2009}.\\
+2010 & Bernstein: «Grover vs.\ McEliece»; los costes de puerta
+  limitan la ventaja cuántica incluso en el peor
+  caso~\cite{bernstein2010}.\\
+2011 & May--Meurer--Thomae~\cite{mmt2011} y
+  Bernstein--Lange--Peters (colisión de bolas)~\cite{blp2011}:
+  representaciones y radios óptimos.\\
+2012 & Becker--Joux--May--Meurer refinan las
+  representaciones~\cite{bjmm2012}.\\
+2013 & Faug\`ere et al.: primer distinguidor de claves de Goppa, en
+  el régimen de tasa alta~\cite{faugere2013}.\\
+2015 & May--Ozerov: la búsqueda de vecinos cercanos que fija los
+  mejores números del estimador~\cite{mo2015}.\\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Estandarización (2016--2024)}}\\
+\midrule
+2016 & El NIST convoca su proceso de estandarización
+  post-cuántica.\\
+2017 & Classic McEliece se presenta al concurso (llegará a la ronda
+  final de KEMs)~\cite{cmspec}; Kachigar--Tillich: la decodificación
+  por síndromes en el modelo cuántico~\cite{kachigar2017}.\\
+2018 & Both--May mejoran las representaciones~\cite{bothmay2018};
+  Bernstein--Persichetti prueban la conversión a KEM en el modelo de
+  oráculo aleatorio~\cite{bp2018}.\\
+2019 & Bindel et al.: cotas más finas de seguridad CCA en el
+  modelo de oráculo aleatorio cuántico~\cite{bindel2019}.\\
+2020 & Classic McEliece pasa a la cuarta ronda del NIST, junto a
+  BIKE, HQC y SIKE.\\
+2022 & El NIST selecciona Kyber (con Dilithium, Falcon y
+  SPHINCS+) y cierra la ronda 3; SIKE cae ante el ataque de
+  Castryck--Decru; Esser--Bellini publican el estimador de ISD que
+  sustentará las tablas del equipo~\cite{esserbellini2022}; Carrier
+  et al.\ y el ataque de fallos contra
+  NTRU~\cite{carrier2022,ntrufault}; el equipo documenta los
+  cambios de la ronda 4~\cite{cmmods3}.\\
+2023 & ISO/IEC abre la enmienda con Classic McEliece: borrador del
+  19 de abril~\cite{cmiso}.\\
+2024 & El NIST finaliza FIPS~203 (ML-KEM), 204 (ML-DSA) y 205
+  (SLH-DSA)~\cite{fips203}, y publica el plan de transición
+  IR~8547~\cite{nist8547}.\\
+\midrule
+\multicolumn{2}{@{}l}{\textit{2025: la primera sacudida}}\\
+\midrule
+17 abr 2025 & El equipo responde a la afirmación de un distinguidor
+  de \texttt{mceliece348864} «de solo $2^{529}$
+  operaciones»~\cite{cm529}.\\
+mar 2025 & El NIST cierra su proceso de KEMs con HQC; Classic
+  McEliece queda fuera de la selección~\cite{nist8545}.\\
+20 nov 2025 & El equipo se pronuncia sobre «You Only Decapsulate
+  Once»~\cite{cm2025yodo}.\\
+\midrule
+\multicolumn{2}{@{}l}{\textit{2026: el año del terremoto}}\\
+\midrule
+3 mar 2026 & Bardet et al.: ataques estructurales sobre CFS y los
+  retos TII~\cite{bardet2026}.\\
+jun 2026 & ISO/IEC publica la Enmienda~2 a la 18033-2 con Classic
+  McEliece: cuatro tamaños, cuatro variantes~\cite{iso18033}.\\
+10 jun 2026 & Briaud et al.\ (BLRT): un nuevo distinguidor
+  algebraico~\cite{briaud2026}.\\
+23 jun 2026 & El equipo responde a la especulación de una recuperación
+  de clave «de $2^{610}$ operaciones»~\cite{cm610}.\\
+29 jun 2026 & Hemmert--Wiemers: distinguidor por anulación de orden
+  superior (CRYPTO~2026)~\cite{hemmertwiemers2026,hemmert2026}.\\
+7 ago 2026 & Ghoshal--Ishai--Jain--Sun (GIJS): el test
+  \emph{holdout}, con préstamos de la teoría de la información
+  privada~\cite{ghoshal2026}.\\
+20 ago 2026 & Vedenev extiende el método a la recuperación de
+  clave; resuelve retos TII~\cite{vedenev2026}.\\
+21 ago 2026 & El equipo publica su réplica a los nuevos
+  métodos~\cite{bernstein2026}.\\
+24 ago 2026 & Saarinen: contabilidad de costes del \emph{holdout} y
+  desafíos resueltos (tres anclas; TII-254 con GPU dedicada durante
+  27{,}2 horas)~\cite{saarinen2026a,saarinen2026b,saarinen2026hover}.\\
+26--28 ago 2026 & Apon et al.\ publican una cota inferior ($2^{1500}$
+  operaciones de bits) para el paso crítico del método de GIJS;
+  Vedenev responde con una ruta
+  alternativa~\cite{apon2026,vedenev2026}.\\
+27 ago 2026 & GIJS añaden a su artículo el método de recuperación de
+  clave aplicado a los conjuntos reales~\cite{ghoshal2026}.\\
+11 sep 2026 & Weis: el \emph{holdout} aplicado directamente; el
+  equipo estimará después que las cuentas de una sola ejecución
+  quedan en $2^{99}$--$2^{102}$~\cite{weis2026}.\\
+15 sep 2026 & Saarinen revisa sus cifras a
+  $2^{126{,}8}$--$2^{145{,}2}$~\cite{saarinen2026b}.\\
+29 sep 2026 & El BSI publica su postura: los métodos de agosto--octubre
+  merecen tomarse en serio; «no debería seguir usándose en nuevos
+  desarrollos»~\cite{bsi2026}.\\
+30 sep 2026 & Bernstein defiende la contabilidad clásica del
+  equipo~\cite{bernstein2026}.\\
+7 oct 2026 & Vedenev publica la revisión de su
+  ataque~\cite{vedenev2026}.\\
+16 oct 2026 & Cierre de estos apuntes.\\
+\end{longtable}
+
+\begin{observacion}{Cómo leer una cronología en movimiento}{cronologia-viva}
+Tres convenciones, para no confundir categorías:
+(1)~las fechas de 2026 son las de las \emph{versiones públicas} de
+los trabajos en el ePrint del IACR, no necesariamente las de su
+concepción;
+(2)~«resuelve el reto TII-$x$» describe desafíos de instancias de
+laboratorio, no la rotura de ningún conjunto de
+Classic McEliece~\cite{bardet2026,saarinen2026b};
+(3)~las cifras de coste de esta cronología son las que cada autor
+reclama, con su contabilidad: el debate del
+capítulo~\ref{ch:2026} precisamente es sobre la contabilidad.
+\end{observacion}

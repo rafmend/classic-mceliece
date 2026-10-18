@@ -1,0 +1,550 @@
+% ======================================================================
+%  CAPÍTULO 19 — GLOSARIO (parte final de la parte V)
+% ======================================================================
+
+\chapter{Glosario}\label{ch:glosario}
+
+\begin{roadmap}
+Este glosario reúne, en orden alfabético, los términos que el libro
+usa con un significado técnico preciso. Cada entrada recuerda en una
+o dos líneas la definición y remite al capítulo donde se desarrolla.
+Hace además las veces de índice: quien busque «¿dónde se habló de
+X?» puede venir aquí primero.
+\end{roadmap}
+
+\medskip
+\noindent Los nombres de algoritmos y los parámetros aparecen con su
+notación del texto; los capítulos se citan por su número de
+referencia.
+
+\begin{description}[leftmargin=2.6em,style=nextline,itemsep=2.5pt,parsep=0pt]
+
+  \item[\textbf{Acortamiento} (\emph{shortening})]
+        Técnica que fija a cero $s$ coordenadas de un código
+        $(n,k)$; en ISD transporta la dureza entre instancias con
+        pérdida $\le0{,}8$ bits, y es la cara amable de tomar
+        $n<q$ (caps.~\ref{ch:isd} y~\ref{ch:estructura}).
+
+  \item[\textbf{AES-128 / AES-256}]
+        Cifrado simétrico de referencia. Grover reduce su búsqueda
+        de clave a $2^{64}$ y $2^{128}$: el «listón de 128 bits»
+        que traducen las categorías (caps.~\ref{ch:pqc}
+        y~\ref{ch:isd}).
+
+  \item[\textbf{Alfa} ($\alpha$; orden del soporte)]
+        Lista ordenada $\alpha_0,\dots,\alpha_{q-1}$ de todos los
+        elementos de $\GF q$; el soporte del código es
+        $L=\{\alpha_0,\dots,\alpha_{n-1}\}$. Su \emph{orden} es
+        secreto y se sortea con $\textsf{FieldOrdering}$
+        (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{Anulación de orden superior} (\emph{higher-order
+        vanishing})]
+        Familia de distinguidores de 2025--2026 que evalúa el
+        código contra funciones de correlación de orden creciente;
+        de ella salen el \emph{holdout} y las estimaciones de
+        GIJS/Weis (caps.~\ref{ch:estructura} y~\ref{ch:2026}).
+
+  \item[\textbf{Benes, red de}]
+        Representación de la permutación $\pi$ (el orden $\alpha$)
+        con $2m-1$ etapas de $2^{m-1}$ conmutadores:
+        $\lceil(2m-1)2^{m-4}\rceil$ bytes (5\,888 para $m=12$);
+        es como la clave secreta guarda $\alpha$
+        (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{Berson, ataque de reacción de}]
+        Con un descifrado que avisa del fallo, $n$ consultas
+        $x\oplus e_j$ revelan el soporte del error. El rechazo
+        implícito del KEM lo desactiva (cap.~\ref{ch:1978}).
+
+  \item[\textbf{BSI} (\emph{Bundesamt für Sicherheit in der
+        Informationstechnik})]
+        Oficina federal alemana de seguridad. Su nota del
+        1-oct-2026 desaconseja Classic McEliece en nuevos
+        despliegues tras las estimaciones de 2026 y recomienda
+        ML-KEM, FrodoKEM o HQC (cap.~\ref{ch:2026}).
+
+  \item[\textbf{Canal lateral}]
+        Ataque a la implementación (tiempos, cachés, accesos)
+        que no rompe el esquema abstracto; el ataque de tiempos de
+        Shoup contra la decodificación es el ejemplo clásico
+        (caps.~\ref{ch:kem} y~\ref{ch:2026}).
+
+  \item[\textbf{Categorías (NIST)}]
+        Escala que traduce «romper el esquema» a costes tipo AES:
+        categoría~1 $\approx2^{143}$ operaciones de puerta
+        (AES-128), categoría~5 $\approx2^{272}$ (AES-256). Classic
+        McEliece se certifica con el modelo de costes que carga la
+        memoria (caps.~\ref{ch:parametros} y~\ref{ch:isd}).
+
+  \item[\textbf{Clase lateral}]
+        Conjunto $y+C$ de vectores con el mismo síndrome que $y$;
+        decodificar es elegir en la clase el representante de peso
+        mínimo (cap.~\ref{ch:lineales}).
+
+  \item[\textbf{Clave equivalente}]
+        Objeto (por ejemplo $g$ y el orden $\alpha$, o un
+        decodificador del código público) con el que se descifra
+        todo sin ser la clave secreta literal; su obtención es una
+        rotura total (caps.~\ref{ch:keygen}, \ref{ch:seguridad}
+        y~\ref{ch:estructura}).
+
+  \item[\textbf{Código de Goppa} ($\Gamma_2(L,g)$)]
+        Código $\{c:\sum_j c_j/(x+\alpha_j)\equiv0\pmod g\}$, con
+        $g$ de grado $t$ sin raíces en $L$; la versión binaria
+        (subcuerpo) con $g$ irreducible tiene distancia
+        $\ge2t+1$: es el código que usa Classic McEliece
+        (cap.~\ref{ch:goppa}).
+
+  \item[\textbf{Código lineal}]
+        Subespacio de $\Ftwo^n$ descrito por una matriz generadora
+        $G$ o una de paridad $\Hmat$; su distancia mínima $d$ es
+        el peso del codeword no nulo más ligero
+        (cap.~\ref{ch:lineales}).
+
+  \item[\textbf{Conjetura de dureza (SD en media)}]
+        «Para todo algoritmo subexponencial, el éxito sobre
+        instancias de la distribución del esquema es
+        despreciable»: el supuesto en el que descansa la seguridad
+        (caps.~\ref{ch:seguridad} y~\ref{ch:isd}).
+
+  \item[\textbf{Cuerpo finito} ($\GF q$ con $q=2^m$; $\Ftwo$)]
+        El terreno donde viven $g$, $\alpha$ y los síndromes;
+        $\Ftwo$ es el cuerpo base y $\GF q$ el de extensión
+        (cap.~\ref{ch:cuerpos}).
+
+  \item[\textbf{Delta} ($\delta$; semilla)]
+        Los $32$ bytes que siembran toda la generación: de ella se
+        derivan deterministamente el código, el orden y el secreto
+        de rechazo $s$; la clave secreta completa es regenerable
+        desde $\delta$ (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{Decode / Encode}]
+        Primitivas del KEM: $\textsf{Encode}(e)=\hat{\Hmat}e$ y
+        $\textsf{Decode}(C)$, que corrige hasta $t$ errores y solo
+        acepta vectores de peso exactamente $t$
+        (caps.~\ref{ch:encapdecap} y~\ref{ch:labkem}).
+
+  \item[\textbf{Despliegues}]
+        Implementaciones reales y usos del esquema: SUPERCOP y
+        \texttt{cmimpl}, liboqs y PQClean, y los despliegues
+        híbridos (Mullvad, Rosenpass, PQConnect), todos anteriores
+        al aviso del BSI de 2026 (cap.~\ref{ch:2026}).
+
+  \item[\textbf{Distancia de Hamming; distancia mínima} ($d$)]
+        El peso de la diferencia entre dos vectores; $d$ es el
+        mínimo peso no nulo de un codeword. El teorema de Goppa da
+        $d\ge2t+1$ y de ahí la decodificación única
+        (caps.~\ref{ch:lineales} y~\ref{ch:goppa}).
+
+  \item[\textbf{Distinguidor}]
+        Algoritmo que decide «¿Goppa de verdad o matriz aleatoria?»
+        con ventaja no despreciable. Erosiona el supuesto de
+        indistinguibilidad de la clave pública, pero no descifra
+        por sí solo (caps.~\ref{ch:seguridad}--\ref{ch:2026}).
+
+  \item[\textbf{Dumer, algoritmo de}]
+        Mejora de Prange (1991) que precomputa columnas y
+        amplifica la probabilidad de éxito por iteración; primer
+        escalón relevante tras Prange (cap.~\ref{ch:isd}).
+
+  \item[\textbf{$e$ (vector de error)}]
+        Vector de peso exactamente $t$ que cifra:
+        $C=\hat{\Hmat}e$. Su soporte es el «mensaje-error» del
+        esquema (caps.~\ref{ch:1978}--\ref{ch:encapdecap}).
+
+  \item[\textbf{Escalera de ataques}]
+        La sucesión que baja la cotización de ISD para cada
+        conjunto: Prange (1962) $\to$ Lee--Brickell/Leon (1988)
+        $\to$ Stern/Dumer (1989/91) $\to$ MMT/BJMM (2011/12)
+        $\to$ May--Mezerov (2015) $\to$ May--Ozerov (2018)
+        $\to$ Esser--Bellini y Carrier (2022) $\to$ las revisiones
+        de 2026 (cap.~\ref{ch:isd}).
+
+  \item[\textbf{Espacio de criptogramas} ($P$)]
+        La imagen de los errores de peso $t$ bajo $\textsf{Encode}$
+        ($\binom{n}{t}$ elementos; $|P|>2^{456}$ en
+        \texttt{348864}); aparece en la cota ROM
+        (cap.~\ref{ch:kem}).
+
+  \item[\textbf{Faugère, ataque de}]
+        Recuperación algebraica de la clave por sistemas
+        polinómicos con interrupción temprana (XLS de Faugère et
+        al.); hoy limitado a $t\le20$: holgura enorme frente a los
+        $t$ reales (caps.~\ref{ch:estructura} y~\ref{ch:2026}).
+
+  \item[\textbf{FieldOrdering}]
+        Algoritmo de la especificación que convierte $32q$ bits en
+        el orden uniforme $\alpha$; el choque de enteros provoca
+        reintento determinista (cap.~\ref{ch:keygen};
+        proposición~\ref{prop:field-ordering}).
+
+  \item[\textbf{FIPS 203/204/205}]
+        Los estándares post-cuánticos del NIST (ML-KEM, ML-DSA,
+        SLH-DSA); el ecosistema del que Classic McEliece es
+        alternativa y complemento (caps.~\ref{ch:pqc}
+        y~\ref{ch:2026}).
+
+  \item[\textbf{FixedWeight}]
+        Algoritmo que muestrea errores uniformes de peso exacto
+        $t$ con trozos de $16$ bits y rechazo; su uniformidad es
+        una proposición (cap.~\ref{ch:encapdecap};
+        proposición~\ref{prop:fixedweight-uniform}).
+
+  \item[\textbf{FO (Fujisaki--Okamoto)}]
+        Transformación genérica de PKE a KEM en el ROM; Classic
+        McEliece usa una versión simplificada (sin reencriptación,
+        con rechazo implícito y secretos más pequeños)
+        (cap.~\ref{ch:kem}).
+
+  \item[\textbf{FrodoKEM}]
+        KEM de retículas (LWE) considerado conservador; una de las
+        alternativas que el BSI recomienda mientras se revisa la
+        TR-02102-1 (cap.~\ref{ch:2026}).
+
+  \item[\textbf{$G'$ (matriz pública de McEliece)}]
+        La generadora disfrazada $G'=SGP$; su versión sistemática
+        se reduce a la clave pública $T$ (caps.~\ref{ch:1978}
+        y~\ref{ch:niederreiter}).
+
+  \item[\textbf{$g$ (polinomio de Goppa)}]
+        Polinomio mónico de grado $t$ sobre $\GF q$ sin raíces en
+        $L$; el secreto central del código, sorteado con
+        $\textsf{Irreducible}$ (caps.~\ref{ch:goppa}
+        y~\ref{ch:keygen}).
+
+  \item[\textbf{Gaussiana (eliminación)}]
+        Procedimiento para llevar $\hat{\Hmat}$ a la forma
+        $(\mathrm{I}_{mt}\,|\,T)$; también el corazón de las
+        iteraciones de ISD (caps.~\ref{ch:labgoppa}
+        y~\ref{ch:isd}).
+
+  \item[\textbf{Grover, algoritmo de}]
+        Búsqueda cuántica con aceleración cuadrática en el
+        exponente: AES-256 $\to2^{128}$; en ISD, la «mitad» del
+        exponente, con la latencia como límite realista
+        (caps.~\ref{ch:pqc} y~\ref{ch:parametros}).
+
+  \item[\textbf{Hamming, código de} {($[7,4,3]$)}]
+        El ejemplo recurrente para síndromes y corrección: matriz
+        de paridad con las siete columnas no nulas y decodificación
+        de un error (cap.~\ref{ch:lineales}).
+
+  \item[\textbf{Harvest now, decrypt later}]
+        Grabar hoy el tráfico cifrado para descifrarlo cuando
+        exista el ordenador cuántico; la razón de migrar antes de
+        que sea urgente (cap.~\ref{ch:pqc}).
+
+  \item[\textbf{Híbrido}]
+        Combinación de un KEM post-cuántico con uno clásico (por
+        ejemplo X25519); los despliegues reales de Classic
+        McEliece son híbridos, lo que conserva la mitad clásica
+        ante roturas (caps.~\ref{ch:pqc} y~\ref{ch:2026}).
+
+  \item[\textbf{Holgura} (\emph{tightness})]
+        Pérdida entre una cota de seguridad y el juego real: el
+        QROM pierde la raíz cuadrada del éxito OW-CPA
+        (cap.~\ref{ch:kem}).
+
+  \item[\textbf{HQC}]
+        KEM de códigos cuasi-cíclicos seleccionado por el NIST en
+        2025; la otra alternativa que el BSI pone por delante de
+        McEliece (caps.~\ref{ch:parametros} y~\ref{ch:2026}).
+
+  \item[\textbf{Irreducible}]
+        Algoritmo de la especificación que convierte $16t$ bits en
+        un $g$ mónico irreducible uniforme; su demostración es la
+        proposición de uniformidad (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{ISD (decodificación por conjuntos de
+        información)}]
+        Familia de algoritmos de decodificación genérica (Prange,
+        Stern, MMT, BJMM, May--Ozerov, \dots) que fija la
+        seguridad clásica de los conjuntos (cap.~\ref{ch:isd}).
+
+  \item[\textbf{ISO/IEC 18033-2 (Amd.2)}]
+        Norma con los $4$ conjuntos $\times$ $4$ variantes $=16$
+        perfiles de Classic McEliece (jun-2026); descarta
+        \texttt{348864} (caps.~\ref{ch:parametros} y~\ref{ch:2026}).
+
+  \item[\textbf{Juguete (el)}]
+        La instancia diminuta usada en los laboratorios:
+        $m=4$ ($q=16$), $n=16$, $t=2$, elaborada paso a paso en el
+        capítulo~\ref{ch:labgoppa} y completa en
+        el~\ref{ch:labkem}; \texttt{toy.py}
+        (apéndice~\ref{app:codigo}) reproduce sus números.
+
+  \item[\textbf{$K$ (clave del KEM)}]
+        Los $32$ bytes que encapsula y desencapsula el KEM:
+        $H(1,e,C)$ en el éxito y $H(0,s,C)$ en el rechazo
+        (caps.~\ref{ch:kem} y~\ref{ch:labkem}).
+
+  \item[\textbf{KAT (vectores de prueba)}]
+        Archivos de la especificación con claves, criptogramas y
+        secretos de referencia; comparables byte a byte porque todo
+        el proceso (incluidos los reintentos) es determinista
+        (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{KEM (encapsulamiento de claves)}]
+        Primitiva \textsf{Encap}/\textsf{Decap} que produce una
+        clave compartida a partir de una clave pública; la que
+        Classic McEliece deriva de su PKE (cap.~\ref{ch:kem}).
+
+  \item[\textbf{Latencia (cuántica)}]
+        Límite práctico de Grover: las iteraciones se serializan y
+        la raíz cuadrada sobreestima al atacante real; de ahí que
+        la «mitad» del exponente se compare con cautela
+        (caps.~\ref{ch:parametros} y~\ref{ch:2026}).
+
+  \item[\textbf{Lee--Brickell}]
+        Primer algoritmo de ISD con lista (1988): fija $p$
+        posiciones «con error» y busca en ellas; semilla de la
+        línea Stern (cap.~\ref{ch:isd}).
+
+  \item[\textbf{Leon}]
+        Variante de lista por información canónica (1988),
+        hermana de Lee--Brickell (cap.~\ref{ch:isd}).
+
+  \item[\textbf{Localizador (polinomio $\sigma$)}]
+        Polinomio cuyas raíces señalan las posiciones del error:
+        $\sigma(x)=\prod_{j\in\supp(e)}(x+\alpha_j)$; Patterson lo
+        recupera del síndrome (caps.~\ref{ch:goppa}
+        y~\ref{ch:labgoppa}).
+
+  \item[\textbf{$m$}]
+        Exponente del cuerpo: $q=2^m$. Classic McEliece usa
+        $m=12$ ($q=4096$) o $m=13$ ($q=8192$); la seguridad
+        estructural crece $\approx8$ bits por unidad de $m$
+        (caps.~\ref{ch:parametros} y~\ref{ch:estructura}).
+
+  \item[\textbf{MatGen}]
+        Subalgoritmo de generación de claves: forma
+        semi-sistemática de las $mt$ primeras columnas, con
+        reintentos deterministas ($\delta\leftarrow\delta'$)
+        (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{May--Mezerov / May--Ozerov}]
+        Ataques que llevan MMT/BJMM y la búsqueda de vecinos a
+        ISD; May--Ozerov (2018) cotiza \texttt{348864} en
+        $2^{140{,}8}$ (memoria libre) (cap.~\ref{ch:isd}).
+
+  \item[\textbf{McEliece (criptosistema)}]
+        El cifrado de 1978: $x=uG'+z$ con la generadora disfrazada
+        y error de peso $t$; quien conoce el código lo decodifica
+        con Patterson (cap.~\ref{ch:1978}).
+
+  \item[\textbf{Memoria (coste de la)}]
+        En ISD, las tablas grandes dominan el coste real: cargarla
+        añade decenas de bits (hasta $33{,}5$ en \texttt{6960119})
+        y decide las categorías (caps.~\ref{ch:isd}
+        y~\ref{ch:2026}).
+
+  \item[\textbf{ML-KEM}]
+        El KEM post-cuántico estandarizado por el NIST (FIPS 203);
+        referencia de comparación para la criptografía de códigos
+        (caps.~\ref{ch:pqc} y~\ref{ch:2026}).
+
+  \item[\textbf{Modelo de costes}]
+        La convención con la que se cuenta el trabajo de un ataque
+        (puertas, bits, operaciones vectoriales, memoria,
+        latencia); las columnas «libre» y «con cargo» de las
+        tablas (caps.~\ref{ch:isd}, \ref{ch:estructura}
+        y~\ref{ch:2026}).
+
+  \item[\textbf{NCP (decodificación / palabra más cercana)}]
+        El problema hermano de SD: dado $y$, hallar el codeword de
+        peso mínimo a distancia de $y$; el descifrado de McEliece
+        es una instancia (caps.~\ref{ch:lineales}
+        y~\ref{ch:seguridad}).
+
+  \item[\textbf{Niederreiter (reformulación)}]
+        Versión dual basada en síndromes: $C=e(H')^{\top}$;
+        equivalente a McEliece por la reducción de la
+        proposición~\ref{prop:nied-reduccion}
+        (cap.~\ref{ch:niederreiter}).
+
+  \item[\textbf{NIST}]
+        Organizador de la competición post-cuántica (2016--2024);
+        estandarizó ML-KEM/ML-DSA/SLH-DSA, aplazó su decisión
+        sobre McEliece y seleccionó HQC como KEM extra
+        (caps.~\ref{ch:pqc} y~\ref{ch:2026}).
+
+  \item[\textbf{OW-CPA}]
+        Juego de seguridad del PKE: recuperar $e$ dado $C$; la
+        raíz que el QROM divide por dos en su cota
+        (caps.~\ref{ch:kem} y~\ref{ch:seguridad}).
+
+  \item[\textbf{Parámetros (conjuntos de)}]
+        Los cinco del estándar: \texttt{348864}, \texttt{460896},
+        \texttt{6688128}, \texttt{6960119}, \texttt{8192128}
+        ($m=12$ o $13$, $t=64$--$128$); sus tablas de tamaños y
+        seguridad (caps.~\ref{ch:parametros}--\ref{ch:2026}).
+
+  \item[\textbf{Paridad (matriz de, $\Hmat$)}]
+        Matriz cuyas filas ortogonalizan el código
+        ($GH^{\top}=0$); en forma sistemática
+        $\hat{\Hmat}=(\mathrm{I}_{mt}\,|\,T)$
+        (caps.~\ref{ch:lineales} y~\ref{ch:keygen}).
+
+  \item[\textbf{Patterson (algoritmo de)}]
+        Decodificador de los códigos de Goppa: forma el síndrome
+        $S$, resuelve la ecuación clave (Euclides/Berlekamp) y
+        halla las raíces del localizador; $O(t^2)$ operaciones en
+        $\GF q$ más inversiones (caps.~\ref{ch:goppa},
+        \ref{ch:labgoppa} y~\ref{ch:encapdecap}).
+
+  \item[\textbf{pcf / pc / f (variantes)}]
+        Sufijos de los conjuntos: \texttt{f} = generación sin
+        reintentos visibles (forma $(32,64)$); \texttt{pc} =
+        confirmación de texto claro ($C=(C_0,C_1)$ con
+        $C_1=H(2,e)$); \texttt{pcf} = ambas (cap.~\ref{ch:parametros}).
+
+  \item[\textbf{Permutación ($P$, $\pi$)}]
+        El disfraz de coordenadas, $(\vv P)_j=\vv_{\sigma(j)}$; su
+        orden es el secreto que FieldOrdering sortea
+        (caps.~\ref{ch:labgoppa} y~\ref{ch:keygen}).
+
+  \item[\textbf{Peso} ($\wt$)]
+        Número de posiciones no nulas. Los parámetros del esquema
+        son pesos: $\wt(e)=t$ y $\wt(z)\le t$
+        (caps.~\ref{ch:lineales} y~\ref{ch:1978}).
+
+  \item[\textbf{Pi} ($\pi$)]
+        La permutación que resulta de ordenar los enteros de
+        FieldOrdering; se guarda comprimida en la red de Benes
+        (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{PKE (cifrado de clave pública)}]
+        El cifrado subyacente (McEliece/Niederreiter) del que el
+        KEM se deriva mediante la transformación del
+        capítulo~\ref{ch:kem}.
+
+  \item[\textbf{PQC (criptografía post-cuántica)}]
+        El campo entero: algoritmos diseñados para resistir
+        atacantes con ordenador cuántico
+        (caps.~\ref{ch:pqc} y~\ref{ch:2026}).
+
+  \item[\textbf{Prange}]
+        ISD original (1962): elegir $k$ columnas y comprobar si el
+        error cae fuera de ellas; iteración barata y probabilidad
+        pequeña. La referencia contra la que se mide todo lo demás
+        (cap.~\ref{ch:isd}).
+
+  \item[\textbf{QROM}]
+        Modelo del oráculo aleatorio cuántico: la cota de FO
+        pierde la raíz cuadrada del éxito OW-CPA
+        (caps.~\ref{ch:kem} y~\ref{ch:estructura}).
+
+  \item[\textbf{Recuperación de clave} (\emph{key recovery})]
+        El objetivo más fuerte de la taxonomía estructural:
+        obtener $g$, el orden $\alpha$ o un decodificador; a él
+        apuntan las cifras de 2026 ($2^{140}$--$2^{148}$,
+        $2^{99}$--$2^{102}$ según contabilidad)
+        (caps.~\ref{ch:estructura} y~\ref{ch:2026}).
+
+  \item[\textbf{Rechazo implícito}]
+        \textsf{Decap} nunca devuelve $\bot$: entrega una clave
+        pseudoaleatoria $H(0,s,C)$; elimina el oráculo
+        observacional de los protocolos (caps.~\ref{ch:kem}
+        y~\ref{ch:encapdecap}).
+
+  \item[\textbf{ROM}]
+        Modelo del oráculo aleatorio clásico; la cota aditiva de
+        la transformación de Fujisaki--Okamoto (cap.~\ref{ch:kem}).
+
+  \item[\textbf{$s$ (secreto de rechazo)}]
+        Cadena uniforme de $n$ bits dentro de la clave secreta;
+        la clave de la rama de rechazo es $H(0,s,C)$
+        (caps.~\ref{ch:keygen} y~\ref{ch:encapdecap}).
+
+  \item[\textbf{SD (Syndrome Decoding)}]
+        El problema: dado $(H,y)$ con $y=He$, hallar $e$ de peso
+        $\le t$. NP-duro en el peor caso; duro en media (conjetura)
+        sobre la distribución del esquema (caps.~\ref{ch:seguridad}
+        y~\ref{ch:isd}).
+
+  \item[\textbf{Semi-sistemática (forma, $(\mu,\nu)$)}]
+        Truco de \textsf{MatGen}: permutar hasta que las $mt$
+        primeras columnas sean independientes;
+        $(\mu,\nu)=(32,64)$ en las variantes \texttt{f}
+        (cap.~\ref{ch:keygen}).
+
+  \item[\textbf{SHAKE256}]
+        El XOF de la especificación: expande semillas, genera
+        $g$ y $\alpha$, y deriva las claves $K$ y de rechazo
+        (caps.~\ref{ch:keygen} y~\ref{ch:labkem}).
+
+  \item[\textbf{Shor, algoritmo de}]
+        Rompe RSA y ECC en tiempo polinómico: la razón de ser de
+        toda la migración post-cuántica (cap.~\ref{ch:pqc}).
+
+  \item[\textbf{Shoup, ataque de tiempos de}]
+        Ataque de canal lateral clásico contra implementaciones de
+        decodificación; la motivación histórica de decodificar en
+        tiempo constante (cap.~\ref{ch:kem}).
+
+  \item[\textbf{Síndrome}]
+        $S(y)=\Hmat y^{\top}$; en el código de Goppa también
+        $S(x)=\sum_j c_j/(x+\alpha_j)$ con columnas
+        $\sigma_j=(x+\alpha_j+1)/g(\alpha_j)$; su espacio tiene
+        dimensión $n-k$ (caps.~\ref{ch:lineales}
+        y~\ref{ch:labgoppa}).
+
+  \item[\textbf{Soporte} ($\supp$)]
+        El conjunto de posiciones no nulas de un vector. El error
+        del KEM es uniforme sobre los $\binom{n}{t}$ soportes de
+        tamaño $t$ (caps.~\ref{ch:lineales}
+        y~\ref{ch:encapdecap}).
+
+  \item[\textbf{Stern (algoritmo de)}]
+        ISD con cruce de listas (1989): el primer gran salto de la
+        escalera ($22$ bits sobre Prange en \texttt{348864})
+        (cap.~\ref{ch:isd}).
+
+  \item[\textbf{$t$}]
+        Grado del polinomio de Goppa y peso exacto del error
+        ($t=64$--$128$ en los conjuntos); fija la distancia
+        $\ge2t+1$ y el trabajo de Patterson
+        (caps.~\ref{ch:goppa} y~\ref{ch:parametros}).
+
+  \item[\textbf{$\Tmat$ (clave pública)}]
+        La mitad derecha de $\hat{\Hmat}=(\mathrm{I}_{mt}|T)$: la
+        clave pública, de $mt\lceil k/8\rceil$ bytes
+        ($261\,120$ a $1\,357\,824$) (caps.~\ref{ch:keygen}
+        y~\ref{ch:parametros}).
+
+  \item[\textbf{Terremoto (2025--2026)}]
+        El periodo de distinguidores, estimaciones y contabilidades
+        en disputa que movió la conversación pública sin romper el
+        esquema (caps.~\ref{ch:estructura} y~\ref{ch:2026}).
+
+  \item[\textbf{TII}]
+        Retos públicos de instancias Goppa pequeñas ($n=214$)
+        usados para probar heurísticas estructurales; no existe
+        (a octubre de 2026) un cómputo de núcleos contra un
+        conjunto real (cap.~\ref{ch:2026}).
+
+  \item[\textbf{Traza} ($\Tr$)]
+        El funcional $\Tr(\beta)=\sum_{i=0}^{m-1}\beta^{2^i}$;
+        criterios de irreducibilidad, raíces cuadradas y
+        linealidad sobre $\Ftwo$ (cap.~\ref{ch:cuerpos}).
+
+  \item[\textbf{Vectores (notación)}]
+        Las cadenas binarias se imprimen con la posición $0$ a la
+        izquierda; al serializar se empaqueta en little-endian
+        (posición $j$ en el bit $j\bmod8$ del byte $j/8$)
+        (caps.~\ref{ch:labkem} y~\ref{app:codigo}).
+
+  \item[\textbf{Weis (ataques de 2026)}]
+        Recuperación heurística de clave vía \emph{holdout},
+        con cifras entre $2^{89}$ y $2^{128}$ según la
+        contabilidad, y la regla «$\approx8$ bits por unidad de
+        $m$» (caps.~\ref{ch:estructura} y~\ref{ch:2026}).
+
+\end{description}
+
+\medskip
+\noindent\textit{Fin del glosario. Los apéndices que siguen cierran el
+libro: el código comentado del juguete (apéndice~\ref{app:codigo}),
+la cronología de medio siglo de historia y las tablas del cuerpo
+$\FF4$.}
